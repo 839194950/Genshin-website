@@ -555,7 +555,7 @@
         提瓦特全息闪卡馆
       </h1>
       <p class="mt-3 text-sm sm:text-base text-slate-300/85 max-w-xl leading-relaxed">
-        收录 48 位原神五星角色手绘涂鸦典藏卡，统一搭载 Cosmos 珠光虹彩、8 层幻彩紫金卡边与星象罗盘全息卡背。请选择下方展区进入赏析。
+        收录 69 位原神五星角色手绘涂鸦典藏卡，统一搭载 Cosmos 珠光虹彩、8 层幻彩紫金卡边与星象罗盘全息卡背。请选择下方展区进入赏析。
       </p>
 
       <!-- Primary Entry CTA -->
@@ -563,7 +563,7 @@
         <button id="btnEnterAll" type="button" class="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-sm font-semibold text-slate-950 bg-gradient-to-r from-amber-200 via-violet-200 to-sky-200 hover:brightness-110 shadow-xl shadow-violet-950/50 transition transform hover:-translate-y-0.5">
           <i data-lucide="sparkles" class="w-4 h-4"></i>
           进入全部典藏馆
-          <span class="font-mono text-xs px-2 py-0.5 rounded-full bg-slate-950/15">48</span>
+          <span class="font-mono text-xs px-2 py-0.5 rounded-full bg-slate-950/15">69</span>
           <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
         </button>
       </div>
@@ -594,7 +594,7 @@
 
     <!-- Minimal Home Footer -->
     <div class="text-center text-[11px] text-slate-500 tracking-wider">
-      VOL.01 · 48 FIVE-STAR CHARACTERS · 7 ELEMENTS · 7 REGIONS
+      VOL.01 · 69 FIVE-STAR CHARACTERS · 7 ELEMENTS · 8 REGIONS
     </div>
   </section>
 
@@ -700,7 +700,7 @@
 
     <!-- Minimal Curatorial Footer -->
     <footer class="mt-9 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 border-t border-white/[0.06] pt-4">
-      <span class="tracking-wider">TEYVAT HAND-DRAWN DOODLE EDITION · 48 FIVE-STAR CARDS</span>
+      <span class="tracking-wider">TEYVAT HAND-DRAWN DOODLE EDITION · 69 FIVE-STAR CARDS</span>
       <span class="hidden sm:inline">快捷键：<kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">←</kbd> <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">→</kbd> 切换 · <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">Space</kbd> 翻面 · <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">Esc</kbd> 关闭</span>
     </footer>
   </div>
@@ -786,6 +786,7 @@
       { key: "须弥", label: "须弥" },
       { key: "枫丹", label: "枫丹" },
       { key: "纳塔", label: "纳塔" },
+      { key: "挪德卡莱", label: "挪德卡莱" },
       { key: "至冬·深渊", label: "至冬 / 深渊" }
     ];
 
@@ -1173,6 +1174,174 @@
         lore: "优雅神秘的枫丹知名调香师，金丝圆镜与翠绿蕾丝礼服暗藏幽香。",
         image: "assets/cards/48_emilie.jpg",
         stars: [{ u: 0.50, v: 0.59, size: 18, color: "#34d399" }, { u: 0.36, v: 0.78, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "mizuki", num: "49", name: "梦见月瑞希", enName: "Yumemizuki Mizuki", title: "绮梦缭怀",
+        code: "TEYVAT · SAR-49", element: "风", region: "稻妻",
+        glow: "#2dd4bf", glow2: "#a78bfa",
+        lore: "秋沙钱汤的食梦貘心理诊疗师，浅水蓝双髻与紫白振袖间萦绕着安神幽香。",
+        image: "assets/cards/49_mizuki.jpg",
+        stars: [{ u: 0.74, v: 0.25, size: 17, color: "#c4b5fd" }, { u: 0.56, v: 0.82, size: 16, color: "#5eead4" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
+      },
+      {
+        id: "cyno", num: "50", name: "赛诺", enName: "Cyno", title: "缄秘的裁谕",
+        code: "TEYVAT · SAR-50", element: "雷", region: "须弥",
+        glow: "#a855f7", glow2: "#f59e0b",
+        lore: "教令院大风纪官，赤眸与胡狼头冠在冷冽紫电与流金微光中昭示铁面裁决。",
+        image: "assets/cards/50_cyno.jpg",
+        stars: [{ u: 0.49, v: 0.21, size: 19, color: "#f87171" }, { u: 0.51, v: 0.63, size: 16, color: "#fbbf24" }, { u: 0.90, v: 0.08, size: 15, color: "#c084fc" }]
+      },
+      {
+        id: "clorinde", num: "51", name: "克洛琳德", enName: "Clorinde", title: "秉烛猎影",
+        code: "TEYVAT · SAR-51", element: "雷", region: "枫丹",
+        glow: "#6366f1", glow2: "#c084fc",
+        lore: "枫丹不败的决斗代理人，深蓝金边三角帽与领口雷晶在虹彩扫光下锋芒毕露。",
+        image: "assets/cards/51_clorinde.jpg",
+        stars: [{ u: 0.51, v: 0.55, size: 19, color: "#38bdf8" }, { u: 0.44, v: 0.12, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
+      },
+      {
+        id: "sigewinne", num: "52", name: "希格雯", enName: "Sigewinne", title: "龙女妙变",
+        code: "TEYVAT · SAR-52", element: "水", region: "枫丹",
+        glow: "#38bdf8", glow2: "#f472b6",
+        lore: "梅洛彼得堡温柔细致的美露莘护士长，蓝白长耳与粉红蝴蝶结溢满治愈暖意。",
+        image: "assets/cards/52_sigewinne.jpg",
+        stars: [{ u: 0.51, v: 0.54, size: 18, color: "#fde68a" }, { u: 0.71, v: 0.17, size: 16, color: "#f9a8d4" }, { u: 0.90, v: 0.08, size: 15, color: "#7dd3fc" }]
+      },
+      {
+        id: "escoffier", num: "53", name: "爱可菲", enName: "Escoffier", title: "明火冰韵",
+        code: "TEYVAT · SAR-53", element: "冰", region: "枫丹",
+        glow: "#38bdf8", glow2: "#fb923c",
+        lore: "享誉枫丹的精密美食家，姜橙卷发与冰晶徽章厨师帽凝结出冷冽与甜香的奇迹。",
+        image: "assets/cards/53_escoffier.jpg",
+        stars: [{ u: 0.72, v: 0.21, size: 19, color: "#7dd3fc" }, { u: 0.62, v: 0.16, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#fdba74" }]
+      },
+      {
+        id: "mualani", num: "54", name: "玛拉妮", enName: "Mualani", title: "逐浪客",
+        code: "TEYVAT · SAR-54", element: "水", region: "纳塔",
+        glow: "#06b6d4", glow2: "#fb923c",
+        lore: "流泉之众最热情的向导，水蓝发带、贝壳编辫与阳光笑颜在浪花虹彩中跃动。",
+        image: "assets/cards/54_mualani.jpg",
+        stars: [{ u: 0.59, v: 0.62, size: 18, color: "#22d3ee" }, { u: 0.51, v: 0.12, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#38bdf8" }]
+      },
+      {
+        id: "chasca", num: "55", name: "恰斯卡", enName: "Chasca", title: "巡空之翼",
+        code: "TEYVAT · SAR-55", element: "风", region: "纳塔",
+        glow: "#be123c", glow2: "#2dd4bf",
+        lore: "花羽会凌厉果决的调停人，绯红长发与碧羽宽檐帽在苍风流光下锐不可当。",
+        image: "assets/cards/55_chasca.jpg",
+        stars: [{ u: 0.67, v: 0.14, size: 18, color: "#2dd4bf" }, { u: 0.42, v: 0.72, size: 16, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#5eead4" }]
+      },
+      {
+        id: "varesa", num: "56", name: "瓦雷莎", enName: "Varesa", title: "丰饶角力",
+        code: "TEYVAT · SAR-56", element: "雷", region: "纳塔",
+        glow: "#ec4899", glow2: "#a855f7",
+        lore: "沃陆之邦元气满满的果园守护者，粉紫麻花辫与弯角在雷光星斑中活力四射。",
+        image: "assets/cards/56_varesa.jpg",
+        stars: [{ u: 0.48, v: 0.61, size: 18, color: "#f472b6" }, { u: 0.61, v: 0.60, size: 16, color: "#c084fc" }, { u: 0.90, v: 0.08, size: 15, color: "#f9a8d4" }]
+      },
+      {
+        id: "zibai", num: "57", name: "兹白", enName: "Zibai", title: "金目青骢",
+        code: "TEYVAT · SAR-57", element: "岩", region: "璃月",
+        glow: "#d97706", glow2: "#5eead4",
+        lore: "璃月古籍中的白马仙人，新月金钗、天青仙袂与明澈金瞳流转清冷月华。",
+        image: "assets/cards/57_zibai.jpg",
+        stars: [{ u: 0.45, v: 0.22, size: 19, color: "#fde68a" }, { u: 0.44, v: 0.72, size: 17, color: "#5eead4" }, { u: 0.90, v: 0.08, size: 15, color: "#fbbf24" }]
+      },
+      {
+        id: "nicole", num: "58", name: "尼可", enName: "Nicole", title: "星语魔女",
+        code: "TEYVAT · SAR-58", element: "火", region: "蒙德",
+        glow: "#f59e0b", glow2: "#3b82f6",
+        lore: "魔女会代号「N」的神秘先知，淡金长发与星芒蓝白礼服折射出天界微光。",
+        image: "assets/cards/58_nicole.jpg",
+        stars: [{ u: 0.43, v: 0.68, size: 19, color: "#fde68a" }, { u: 0.46, v: 0.23, size: 16, color: "#60a5fa" }, { u: 0.90, v: 0.08, size: 15, color: "#fbbf24" }]
+      },
+      {
+        id: "lohen", num: "59", name: "洛恩", enName: "Lohen", title: "霜羽副队",
+        code: "TEYVAT · SAR-59", element: "冰", region: "蒙德",
+        glow: "#38bdf8", glow2: "#34d399",
+        lore: "西风骑士团第五小队副队长，薄荷短发与靛蓝银翼礼服间透出凛冽从容的寒锋。",
+        image: "assets/cards/59_lohen.jpg",
+        stars: [{ u: 0.49, v: 0.56, size: 19, color: "#38bdf8" }, { u: 0.75, v: 0.62, size: 16, color: "#e2e8f0" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "ineffa", num: "60", name: "伊涅芙", enName: "Ineffa", title: "机巧星侍",
+        code: "TEYVAT · SAR-60", element: "雷", region: "挪德卡莱",
+        glow: "#38bdf8", glow2: "#ef4444",
+        lore: "挪德卡莱工坊诞生的机巧人偶少女，冰蓝双髻、机械耳饰与蓝红披风闪烁电光。",
+        image: "assets/cards/60_ineffa.jpg",
+        stars: [{ u: 0.63, v: 0.64, size: 19, color: "#fde68a" }, { u: 0.49, v: 0.17, size: 16, color: "#38bdf8" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
+      },
+      {
+        id: "lauma", num: "61", name: "菈乌玛", enName: "Lauma", title: "霜月咏者",
+        code: "TEYVAT · SAR-61", element: "草", region: "挪德卡莱",
+        glow: "#10b981", glow2: "#a78bfa",
+        lore: "霜月之子的灵性咏月使，银紫长发、月桂鹿角与青碧礼服沐浴在清辉之中。",
+        image: "assets/cards/61_lauma.jpg",
+        stars: [{ u: 0.16, v: 0.24, size: 17, color: "#e2e8f0" }, { u: 0.44, v: 0.69, size: 18, color: "#34d399" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "flins", num: "62", name: "菲林斯", enName: "Flins", title: "北岛守灯人",
+        code: "TEYVAT · SAR-62", element: "雷", region: "挪德卡莱",
+        glow: "#6366f1", glow2: "#facc15",
+        lore: "独守北岛灯塔与静谧墓园的守灯人，蓝黑碎发与冷冽金眸点亮长夜雷辉。",
+        image: "assets/cards/62_flins.jpg",
+        stars: [{ u: 0.74, v: 0.64, size: 18, color: "#e2e8f0" }, { u: 0.52, v: 0.53, size: 16, color: "#facc15" }, { u: 0.90, v: 0.08, size: 15, color: "#818cf8" }]
+      },
+      {
+        id: "nefer", num: "63", name: "奈芙尔", enName: "Nefer", title: "秘馆蛇影",
+        code: "TEYVAT · SAR-63", element: "草", region: "挪德卡莱",
+        glow: "#059669", glow2: "#f59e0b",
+        lore: "挪德卡莱秘闻馆之主，墨绿长发、金蛇发簪与琥珀猫瞳尽显诡谲华贵气韵。",
+        image: "assets/cards/63_nefer.jpg",
+        stars: [{ u: 0.50, v: 0.58, size: 19, color: "#34d399" }, { u: 0.70, v: 0.24, size: 17, color: "#fbbf24" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "columbina", num: "64", name: "哥伦比娅", enName: "Columbina", title: "月下少女",
+        code: "TEYVAT · SAR-64", element: "水", region: "挪德卡莱",
+        glow: "#e11d48", glow2: "#7dd3fc",
+        lore: "栖身月光下的神秘少女，黑红长发、纯白羽饰与轻纱眼罩在珠光下如梦似幻。",
+        image: "assets/cards/64_columbina.jpg",
+        stars: [{ u: 0.74, v: 0.16, size: 18, color: "#e0f2fe" }, { u: 0.51, v: 0.55, size: 17, color: "#7dd3fc" }, { u: 0.90, v: 0.08, size: 15, color: "#fda4af" }]
+      },
+      {
+        id: "linnea", num: "65", name: "莉奈娅", enName: "Linnea", title: "雪原妖精",
+        code: "TEYVAT · SAR-65", element: "岩", region: "挪德卡莱",
+        glow: "#f59e0b", glow2: "#fb7185",
+        lore: "成长于人间的雪国妖精，粉红发丝、精灵尖耳与琥珀晶石在暖金扫光中熠熠生辉。",
+        image: "assets/cards/65_linnea.jpg",
+        stars: [{ u: 0.48, v: 0.60, size: 19, color: "#fbbf24" }, { u: 0.71, v: 0.19, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#fda4af" }]
+      },
+      {
+        id: "sandrone", num: "66", name: "桑多涅", enName: "Sandrone", title: "傀儡木偶",
+        code: "TEYVAT · SAR-66", element: "冰", region: "挪德卡莱",
+        glow: "#dc2626", glow2: "#94a3b8",
+        lore: "愚人众第七席执行官「木偶」，米金盘发、蕾丝软帽与红宝石领扣透出古典人偶的冷艳。",
+        image: "assets/cards/66_sandrone.jpg",
+        stars: [{ u: 0.51, v: 0.56, size: 19, color: "#f43f5e" }, { u: 0.78, v: 0.27, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#cbd5e1" }]
+      },
+      {
+        id: "odette", num: "67", name: "奥黛塔", enName: "Odette", title: "冰湖天鹅",
+        code: "TEYVAT · SAR-67", element: "冰", region: "至冬·深渊",
+        glow: "#38bdf8", glow2: "#e2e8f0",
+        lore: "皇家剧院的首席芭蕾舞者，冰蓝发髻、银羽额饰与素白羽衣宛若霜湖起舞的天鹅。",
+        image: "assets/cards/67_odette.jpg",
+        stars: [{ u: 0.45, v: 0.24, size: 18, color: "#7dd3fc" }, { u: 0.68, v: 0.21, size: 17, color: "#f8fafc" }, { u: 0.90, v: 0.08, size: 15, color: "#bae6fd" }]
+      },
+      {
+        id: "vesna", num: "68", name: "薇斯纳", enName: "Vesna", title: "春风妖精",
+        code: "TEYVAT · SAR-68", element: "风", region: "至冬·深渊",
+        glow: "#10b981", glow2: "#fde047",
+        lore: "效忠女皇的春之利刃，嫩绿精灵羽翼与雪白毛领披风在风华虹彩间轻盈凌厉。",
+        image: "assets/cards/68_vesna.jpg",
+        stars: [{ u: 0.51, v: 0.55, size: 18, color: "#34d399" }, { u: 0.65, v: 0.61, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "mitya", num: "69", name: "米提亚", enName: "Mitya", title: "紫夜冬影",
+        code: "TEYVAT · SAR-69", element: "雷", region: "至冬·深渊",
+        glow: "#8b5cf6", glow2: "#c084fc",
+        lore: "漫步雪原剧场的至冬青年，微卷浅紫短发与织纹围巾在紫电微光中显得深邃莫测。",
+        image: "assets/cards/69_mitya.jpg",
+        stars: [{ u: 0.34, v: 0.64, size: 18, color: "#c4b5fd" }, { u: 0.76, v: 0.68, size: 16, color: "#e2e8f0" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
       }
     ];
 
