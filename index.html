@@ -130,13 +130,16 @@
     /* Depth-of-Field Sibling Dimming in Grid Mode */
     #galleryGrid.has-hover .gallery-item:not(.is-focused) {
       opacity: 0.62;
-      filter: saturate(0.84);
       transform: scale(0.975);
+    }
+
+    /* Saturation dim only on intersecting items, applied instantly to avoid per-frame re-filtering */
+    #galleryGrid.has-hover .gallery-item.is-visible:not(.is-focused) {
+      filter: saturate(0.84);
     }
 
     .gallery-item {
       transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
-                  filter 0.36s cubic-bezier(0.22, 1, 0.36, 1),
                   transform 0.40s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
@@ -210,6 +213,16 @@
       pointer-events: none;
       backface-visibility: visible;
     }
+
+    /* brightness(k) baked into stop colors (linear RGB scale, pixel-equivalent) */
+    .thickness-layer.t1 { background: linear-gradient(135deg, #d4b367 0%, #886ec7 48%, #dbcda4 100%); box-shadow: inset 0 0 2px rgba(242, 242, 242, 0.55); }
+    .thickness-layer.t2 { background: linear-gradient(135deg, #c4a55f 0%, #7e66b8 48%, #cabe98 100%); box-shadow: inset 0 0 2px rgba(224, 224, 224, 0.55); }
+    .thickness-layer.t3 { background: linear-gradient(135deg, #b79a59 0%, #755fab 48%, #bdb18e 100%); box-shadow: inset 0 0 2px rgba(209, 209, 209, 0.55); }
+    .thickness-layer.t4 { background: linear-gradient(135deg, #cdad63 0%, #846bc0 48%, #d4c79f 100%); box-shadow: inset 0 0 2px rgba(235, 235, 235, 0.55); }
+    .thickness-layer.t5 { background: linear-gradient(135deg, #a98f52 0%, #6d589f 48%, #afa483 100%); box-shadow: inset 0 0 2px rgba(194, 194, 194, 0.55); }
+    .thickness-layer.t6 { background: linear-gradient(135deg, #9c844c 0%, #645192 48%, #a19779 100%); box-shadow: inset 0 0 2px rgba(179, 179, 179, 0.55); }
+    .thickness-layer.t7 { background: linear-gradient(135deg, #8f7845 0%, #5c4a86 48%, #938a6f 100%); box-shadow: inset 0 0 2px rgba(163, 163, 163, 0.55); }
+    .thickness-layer.t8 { background: linear-gradient(135deg, #7d693c 0%, #504175 48%, #817961 100%); box-shadow: inset 0 0 2px rgba(143, 143, 143, 0.55); }
 
     .card-face {
       position: absolute;
@@ -632,7 +645,7 @@
 
         <button id="btnAmbientFloat" type="button" class="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-violet-100 hover:bg-white/10 transition">
           <i data-lucide="orbit" class="w-3.5 h-3.5 text-amber-200"></i>
-          <span id="ambientFloatLabel">微浮：开</span>
+          <span id="ambientFloatLabel">微浮：关</span>
         </button>
 
         <button id="btnSoundToggle" type="button" class="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-amber-200 transition" aria-label="切换音效">
@@ -653,6 +666,7 @@
     <!-- View 1: Museum Showcase Grid -->
     <main id="viewGridContainer" class="my-auto">
       <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-7 items-start justify-items-center"></div>
+      <div id="gridPager" class="mt-8 flex items-center justify-center gap-2 flex-wrap"></div>
     </main>
 
     <!-- View 2: Focused 3D Carousel Stage -->
@@ -1354,7 +1368,31 @@
     let filterBarMode = "element"; // "element" | "region"
     let viewMode = "grid";     // "grid" | "stage"
     let stageIndex = 0;
-    let ambientFloatEnabled = true;
+    let ambientFloatEnabled = false;
+    let gridPage = 0;
+    const GRID_PAGE_SIZE = 8;
+
+    // Viewport culling for grid cards (offscreen cards skip per-frame work)
+    let gridVisibilityObserver = null;
+    function observeGridSlot(ctrl) {
+      if (!gridVisibilityObserver) {
+        gridVisibilityObserver = new IntersectionObserver((entries) => {
+          for (const en of entries) {
+            const c = en.target.__holoCtrl;
+            if (c) c.visible = en.isIntersecting;
+            const item = en.target.parentElement;
+            if (item) item.classList.toggle("is-visible", en.isIntersecting);
+          }
+        }, { rootMargin: "120px 0px" });
+      }
+      ctrl.slotEl.__holoCtrl = ctrl;
+      ctrl.visible = true;
+      gridVisibilityObserver.observe(ctrl.slotEl);
+    }
+
+    // Cursor glow vars are flushed once per frame instead of per pointermove
+    let cursorPending = null;
+    let cursorWritten = ["", ""];
     let soundEnabled = false;
     let modalOpenIndex = -1;
     let modalFlipped = false;
@@ -1441,6 +1479,7 @@
       if (type === "element") filterBarMode = "element";
       if (type === "region") filterBarMode = "region";
       stageIndex = 0;
+      gridPage = 0;
 
       activeScreen = "gallery";
       document.getElementById("homeScreen").classList.add("hidden");
@@ -1494,6 +1533,7 @@
         filterType = "all";
         filterValue = "all";
         stageIndex = 0;
+        gridPage = 0;
         playChime("switch");
         renderGalleryFilterBar();
         renderCurrentGalleryView();
@@ -1515,6 +1555,7 @@
           filterType = filterBarMode;
           filterValue = item.key;
           stageIndex = 0;
+          gridPage = 0;
           playChime("switch");
           renderGalleryFilterBar();
           renderCurrentGalleryView();
@@ -1527,21 +1568,22 @@
     // Holo Card Builder & Starburst Renderer
     // =========================================================================
     function createHoloCardHTML(card, sizeClass) {
+      const artAttrs = sizeClass === "" ? 'loading="lazy" decoding="async"' : 'decoding="async"';
       return `
         <div class="holo-shadow" style="--card-glow: ${card.glow};"></div>
         <div class="holo-card ${sizeClass}">
           <div class="holo-flip">
-            <div class="thickness-layer" style="transform: translateZ(-1px); filter: brightness(0.95);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-2px); filter: brightness(0.88);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-3px); filter: brightness(0.82);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-4px); filter: brightness(0.92);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-5px); filter: brightness(0.76);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-6px); filter: brightness(0.70);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-7px); filter: brightness(0.64);"></div>
-            <div class="thickness-layer" style="transform: translateZ(-8px); filter: brightness(0.56);"></div>
+            <div class="thickness-layer t1" style="transform: translateZ(-1px);"></div>
+            <div class="thickness-layer t2" style="transform: translateZ(-2px);"></div>
+            <div class="thickness-layer t3" style="transform: translateZ(-3px);"></div>
+            <div class="thickness-layer t4" style="transform: translateZ(-4px);"></div>
+            <div class="thickness-layer t5" style="transform: translateZ(-5px);"></div>
+            <div class="thickness-layer t6" style="transform: translateZ(-6px);"></div>
+            <div class="thickness-layer t7" style="transform: translateZ(-7px);"></div>
+            <div class="thickness-layer t8" style="transform: translateZ(-8px);"></div>
 
             <div class="card-face card-front">
-              <img class="card-art" src="${card.image}" alt="${card.name}" />
+              <img class="card-art" src="${card.image}" alt="${card.name}" ${artAttrs} />
               <div class="holo-pearl"></div>
               <div class="holo-diffraction"></div>
               <div class="holo-cosmos"></div>
@@ -1577,21 +1619,35 @@
       `;
     }
 
+    // Glow sprites pre-rendered once per color; drawImage replaces per-frame gradient allocation
+    const glowSpriteCache = new Map();
+    function getGlowSprite(color) {
+      let spr = glowSpriteCache.get(color);
+      if (!spr) {
+        const R = 64;
+        spr = document.createElement("canvas");
+        spr.width = spr.height = R * 2;
+        const c = spr.getContext("2d");
+        const g = c.createRadialGradient(R, R, 0, R, R, R);
+        g.addColorStop(0, "rgba(255,255,255,0.95)");
+        g.addColorStop(0.28, color);
+        g.addColorStop(1, "rgba(139,92,246,0)");
+        c.fillStyle = g;
+        c.fillRect(0, 0, R * 2, R * 2);
+        glowSpriteCache.set(color, spr);
+      }
+      return spr;
+    }
+
     function drawFourPointStar(ctx, x, y, size, alpha, color, rot) {
       if (alpha <= 0.04) return;
       ctx.save();
       ctx.translate(x, y);
       ctx.rotate(rot);
 
-      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.95);
-      grad.addColorStop(0, "rgba(255,255,255,0.95)");
-      grad.addColorStop(0.28, color);
-      grad.addColorStop(1, "rgba(139,92,246,0)");
+      const gr = size * 0.95;
       ctx.globalAlpha = Math.min(0.88, alpha * 0.78);
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(0, 0, size * 0.95, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.drawImage(getGlowSprite(color), -gr, -gr, gr * 2, gr * 2);
 
       ctx.globalAlpha = Math.min(0.95, alpha);
       ctx.fillStyle = color;
@@ -1629,7 +1685,7 @@
 
       const ctrl = {
         slotEl, cardEl, flipEl, starCanvas, starCtx, card, phaseOffset, scaleMode,
-        hovering: false, flipped: false,
+        hovering: false, flipped: false, settled: false,
         targetRx: 0, targetRy: 0, rx: 0, ry: 0, rz: 0, fy: 0
       };
 
@@ -1650,12 +1706,13 @@
 
       cardEl.addEventListener("pointerenter", () => {
         ctrl.hovering = true;
+        ctrl.rect = cardEl.getBoundingClientRect();
         setAmbientTheme(card.glow, card.glow2);
         if (callbacks && callbacks.onEnter) callbacks.onEnter();
       });
 
       cardEl.addEventListener("pointermove", (e) => {
-        const rect = cardEl.getBoundingClientRect();
+        const rect = ctrl.rect || cardEl.getBoundingClientRect();
         const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
         const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1;
         ctrl.hovering = true;
@@ -1665,6 +1722,7 @@
 
       cardEl.addEventListener("pointerleave", () => {
         ctrl.hovering = false;
+        ctrl.rect = null;
         ctrl.targetRx = 0;
         ctrl.targetRy = 0;
         if (callbacks && callbacks.onLeave) callbacks.onLeave();
@@ -1701,11 +1759,17 @@
       grid.classList.remove("has-hover");
       grid.innerHTML = "";
       gridControllers.length = 0;
+      if (gridVisibilityObserver) gridVisibilityObserver.disconnect();
 
-      list.forEach((card, index) => {
+      const totalPages = Math.max(1, Math.ceil(list.length / GRID_PAGE_SIZE));
+      gridPage = Math.min(Math.max(0, gridPage), totalPages - 1);
+      const pageList = list.slice(gridPage * GRID_PAGE_SIZE, (gridPage + 1) * GRID_PAGE_SIZE);
+
+      pageList.forEach((card, i) => {
+        const index = gridPage * GRID_PAGE_SIZE + i;
         const item = document.createElement("div");
         item.className = "gallery-item reveal-card w-full flex flex-col items-center";
-        item.style.animationDelay = `${Math.min(index, 7) * 55}ms`;
+        item.style.animationDelay = `${Math.min(i, 7) * 55}ms`;
 
         item.innerHTML = `
           <div class="holo-slot w-full">
@@ -1728,7 +1792,7 @@
         grid.appendChild(item);
         const slot = item.querySelector(".holo-slot");
 
-        const ctrl = attachCardController(slot, card, index * 0.9, "grid", {
+        const ctrl = attachCardController(slot, card, i * 0.9, "grid", {
           onEnter: () => {
             grid.classList.add("has-hover");
             item.classList.add("is-focused");
@@ -1748,7 +1812,31 @@
         });
 
         gridControllers.push(ctrl);
+        observeGridSlot(ctrl);
       });
+      renderGridPager(totalPages);
+    }
+
+    function renderGridPager(totalPages) {
+      const pager = document.getElementById("gridPager");
+      pager.innerHTML = "";
+      if (totalPages <= 1) return;
+      const mk = (label, disabled, active, fn, aria) => {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.disabled = disabled;
+        b.className = active
+          ? "min-w-8 h-8 px-2 rounded-full text-xs font-semibold bg-amber-300/20 text-amber-200 border border-amber-200/40"
+          : "min-w-8 h-8 px-2 rounded-full text-xs bg-white/10 text-slate-300 border border-white/10 hover:bg-white/20 hover:text-amber-200 transition disabled:opacity-40";
+        b.textContent = label;
+        b.setAttribute("aria-label", aria);
+        b.addEventListener("click", () => { playChime("switch"); fn(); });
+        pager.appendChild(b);
+      };
+      const go = (p) => { gridPage = p; buildGalleryGrid(getFilteredCards()); };
+      mk("‹", gridPage === 0, false, () => go(gridPage - 1), "上一页");
+      for (let p = 0; p < totalPages; p++) mk(String(p + 1), false, p === gridPage, () => go(p), `第${p + 1}页`);
+      mk("›", gridPage === totalPages - 1, false, () => go(gridPage + 1), "下一页");
     }
 
     function renderStageCarousel(idx) {
@@ -1932,10 +2020,7 @@
     });
 
     window.addEventListener("pointermove", (e) => {
-      const px = (e.clientX / window.innerWidth) * 100;
-      const py = (e.clientY / window.innerHeight) * 100;
-      document.documentElement.style.setProperty("--cursor-x", `${px.toFixed(1)}%`);
-      document.documentElement.style.setProperty("--cursor-y", `${py.toFixed(1)}%`);
+      cursorPending = [(e.clientX / window.innerWidth) * 100, (e.clientY / window.innerHeight) * 100];
     });
 
     window.addEventListener("keydown", (e) => {
@@ -1962,6 +2047,23 @@
     const ambCanvas = document.getElementById("ambientParticles");
     const ambCtx = ambCanvas.getContext("2d");
     const ambPalette = ["#a78bfa", "#67e8f9", "#fde68a", "#f0abfc"];
+    const ambGlowCache = new Map();
+    function getAmbGlowSprite(color) {
+      let spr = ambGlowCache.get(color);
+      if (!spr) {
+        const R = 64;
+        spr = document.createElement("canvas");
+        spr.width = spr.height = R * 2;
+        const c = spr.getContext("2d");
+        const g = c.createRadialGradient(R, R, 0, R, R, R);
+        g.addColorStop(0, color);
+        g.addColorStop(1, "rgba(0,0,0,0)");
+        c.fillStyle = g;
+        c.fillRect(0, 0, R * 2, R * 2);
+        ambGlowCache.set(color, spr);
+      }
+      return spr;
+    }
     const ambPool = Array.from({ length: 34 }, (_, i) => ({
       x: Math.random(), y: Math.random(),
       r: 1.4 + Math.random() * 4.4,
@@ -1979,16 +2081,22 @@
       ambCanvas.width = Math.floor(window.innerWidth * dpr);
       ambCanvas.height = Math.floor(window.innerHeight * dpr);
       ambCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      gridControllers.forEach((c) => c.syncCanvasSize());
-      if (stageController) stageController.syncCanvasSize();
-      if (spotlightController) spotlightController.syncCanvasSize();
+      gridControllers.forEach((c) => { c.syncCanvasSize(); c.rect = null; updateController(c, 0.016, globalPhase, true); });
+      if (stageController) { stageController.syncCanvasSize(); stageController.rect = null; }
+      if (spotlightController) { spotlightController.syncCanvasSize(); spotlightController.rect = null; }
     }
+    window.addEventListener("scroll", () => {
+      gridControllers.forEach((c) => { c.rect = null; });
+      if (stageController) stageController.rect = null;
+      if (spotlightController) spotlightController.rect = null;
+    }, { passive: true });
 
     let lastTs = performance.now();
     let globalPhase = 0;
     let rafHandle = null;
+    let contentPhase = false;
 
-    function updateController(ctrl, dt, t) {
+    function updateController(ctrl, dt, t, contentDue = true) {
       const p = t + ctrl.phaseOffset;
       let gx = ctrl.targetRx;
       let gy = ctrl.targetRy;
@@ -2004,14 +2112,33 @@
           gfy = (isLarge ? 6.0 : 4.2) * Math.sin(p + Math.PI * 0.25);
         }
       } else {
-        gfy = -4;
+        gfy = -4 + 1.6 * Math.sin(p * 1.15);
+        gy += 2.2 * Math.sin(p * 0.9);
+        gx += 1.5 * Math.cos(p * 0.8);
       }
 
-      const lerp = 1 - Math.exp(-dt * 9.5);
+      const lerp = 1 - Math.exp(-dt * 18);
       ctrl.rx += (gx - ctrl.rx) * lerp;
       ctrl.ry += (gy - ctrl.ry) * lerp;
       ctrl.rz += (gz - ctrl.rz) * lerp;
       ctrl.fy += (gfy - ctrl.fy) * lerp;
+      ctrl.settled = Math.abs(gx - ctrl.rx) < 0.01 && Math.abs(gy - ctrl.ry) < 0.01
+        && Math.abs(gz - ctrl.rz) < 0.01 && Math.abs(gfy - ctrl.fy) < 0.01;
+
+      const st = ctrl.slotEl.style;
+      if (!ctrl.lastWrites) ctrl.lastWrites = {};
+      const put = (k, v) => {
+        if (ctrl.lastWrites[k] !== v) {
+          ctrl.lastWrites[k] = v;
+          st.setProperty(k, v);
+        }
+      };
+      // Transform vars run at display rate; sheen/shadow vars and stars at content rate
+      put("--rx", `${ctrl.rx.toFixed(2)}deg`);
+      put("--ry", `${ctrl.ry.toFixed(2)}deg`);
+      put("--rz", `${ctrl.rz.toFixed(2)}deg`);
+      put("--fy", `${ctrl.fy.toFixed(2)}px`);
+      if (!contentDue) return;
 
       const normX = 0.5 + ctrl.ry / 34;
       const normY = 0.5 - ctrl.rx / 26;
@@ -2021,17 +2148,12 @@
       const sweepPct = Math.max(-12, Math.min(115, sweepNorm * 100));
       const hue = ctrl.ry * 4.0 + ctrl.rx * 2.6;
 
-      const st = ctrl.slotEl.style;
-      st.setProperty("--rx", `${ctrl.rx.toFixed(2)}deg`);
-      st.setProperty("--ry", `${ctrl.ry.toFixed(2)}deg`);
-      st.setProperty("--rz", `${ctrl.rz.toFixed(2)}deg`);
-      st.setProperty("--fy", `${ctrl.fy.toFixed(2)}px`);
-      st.setProperty("--mx", `${mx.toFixed(1)}%`);
-      st.setProperty("--my", `${my.toFixed(1)}%`);
-      st.setProperty("--sweep", `${sweepPct.toFixed(1)}%`);
-      st.setProperty("--hue", `${hue.toFixed(1)}deg`);
-      st.setProperty("--sx", `${(-ctrl.ry * 1.35).toFixed(1)}px`);
-      st.setProperty("--sy", `${(22 + ctrl.rx * 0.85 - ctrl.fy * 0.35).toFixed(1)}px`);
+      put("--mx", `${mx.toFixed(1)}%`);
+      put("--my", `${my.toFixed(1)}%`);
+      put("--sweep", `${sweepPct.toFixed(1)}%`);
+      put("--hue", `${hue.toFixed(1)}deg`);
+      put("--sx", `${(-ctrl.ry * 1.35).toFixed(1)}px`);
+      put("--sy", `${(22 + ctrl.rx * 0.85 - ctrl.fy * 0.35).toFixed(1)}px`);
 
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const cw = ctrl.starCanvas.width / dpr;
@@ -2050,44 +2172,53 @@
       });
     }
 
-    function tick(now) {
+    function tick(now, forceContent) {
       const dt = Math.min(0.05, (now - lastTs) / 1000);
       lastTs = now;
       globalPhase += dt * 1.15;
+      contentPhase = !contentPhase;
+      const contentDue = forceContent || contentPhase;
+
+      if (cursorPending) {
+        const cx = cursorPending[0].toFixed(1) + "%";
+        const cy = cursorPending[1].toFixed(1) + "%";
+        if (cx !== cursorWritten[0] || cy !== cursorWritten[1]) {
+          cursorWritten = [cx, cy];
+          document.documentElement.style.setProperty("--cursor-x", cx);
+          document.documentElement.style.setProperty("--cursor-y", cy);
+        }
+      }
 
       const w = window.innerWidth;
       const h = window.innerHeight;
-      ambCtx.clearRect(0, 0, w, h);
-      for (let i = 0; i < ambPool.length; i++) {
-        const pt = ambPool[i];
-        const x = (pt.x + pt.ax * Math.sin(globalPhase * pt.spd + pt.px)) * w;
-        const y = (pt.y + pt.ay * Math.cos(globalPhase * pt.spd + pt.py)) * h;
-        const pulse = 0.4 + 0.6 * Math.sin(globalPhase * 1.2 + pt.px);
-        if (pt.spark) {
-          drawFourPointStar(ambCtx, x, y, pt.r * 2.8, pulse * 0.52, pt.col, Math.sin(globalPhase + pt.px) * 0.3);
-        } else {
-          ambCtx.save();
-          ambCtx.globalCompositeOperation = "lighter";
-          const g = ambCtx.createRadialGradient(x, y, 0, x, y, pt.r * 2.4);
-          g.addColorStop(0, pt.col);
-          g.addColorStop(1, "rgba(0,0,0,0)");
-          ambCtx.globalAlpha = 0.24 * pulse;
-          ambCtx.fillStyle = g;
-          ambCtx.beginPath();
-          ambCtx.arc(x, y, pt.r * 2.4, 0, Math.PI * 2);
-          ambCtx.fill();
-          ambCtx.restore();
+      if (contentDue) {
+        ambCtx.clearRect(0, 0, w, h);
+        for (let i = 0; i < ambPool.length; i++) {
+          const pt = ambPool[i];
+          const x = (pt.x + pt.ax * Math.sin(globalPhase * pt.spd + pt.px)) * w;
+          const y = (pt.y + pt.ay * Math.cos(globalPhase * pt.spd + pt.py)) * h;
+          const pulse = 0.4 + 0.6 * Math.sin(globalPhase * 1.2 + pt.px);
+          if (pt.spark) {
+            drawFourPointStar(ambCtx, x, y, pt.r * 2.8, pulse * 0.52, pt.col, Math.sin(globalPhase + pt.px) * 0.3);
+          } else {
+            ambCtx.save();
+            ambCtx.globalCompositeOperation = "lighter";
+            ambCtx.globalAlpha = 0.24 * pulse;
+            const ar = pt.r * 2.4;
+            ambCtx.drawImage(getAmbGlowSprite(pt.col), x - ar, y - ar, ar * 2, ar * 2);
+            ambCtx.restore();
+          }
         }
       }
 
       if (activeScreen === "gallery") {
         if (viewMode === "grid") {
-          gridControllers.forEach((ctrl) => updateController(ctrl, dt, globalPhase));
+          gridControllers.forEach((ctrl) => { if (ctrl.visible !== false) updateController(ctrl, dt, globalPhase, ctrl.hovering || (ambientFloatEnabled ? contentDue : !ctrl.settled)); });
         } else if (stageController) {
-          updateController(stageController, dt, globalPhase);
+          updateController(stageController, dt, globalPhase, contentDue || stageController.hovering || stageController.scaleMode !== "grid");
         }
         if (spotlightController) {
-          updateController(spotlightController, dt, globalPhase);
+          updateController(spotlightController, dt, globalPhase, contentDue || spotlightController.hovering || spotlightController.scaleMode !== "grid");
         }
       }
 
@@ -2095,6 +2226,14 @@
     }
 
     window.addEventListener("resize", resizeAll);
+    document.addEventListener("visibilitychange", () => {
+      if (document.hidden) {
+        if (rafHandle) { cancelAnimationFrame(rafHandle); rafHandle = null; }
+      } else if (!rafHandle) {
+        lastTs = performance.now();
+        rafHandle = requestAnimationFrame(tick);
+      }
+    });
     function bootApp() {
       if (bootApp._done) return;
       bootApp._done = true;
