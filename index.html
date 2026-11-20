@@ -1,0 +1,1949 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>提瓦特全息闪卡馆 · Teyvat SAR Collection</title>
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+  <style>
+    :root {
+      --ambient-a: #8b5cf6;
+      --ambient-b: #38bdf8;
+      --cursor-x: 50%;
+      --cursor-y: 40%;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: "Inter", -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #05050c;
+      color: #f8fafc;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Cursor-Reactive Museum Studio Backdrop */
+    .studio-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      background:
+        radial-gradient(660px circle at var(--cursor-x) var(--cursor-y), color-mix(in srgb, var(--ambient-a) 18%, transparent), transparent 64%),
+        radial-gradient(560px circle at 82% 84%, color-mix(in srgb, var(--ambient-b) 14%, transparent), transparent 60%),
+        radial-gradient(circle at 50% 36%, #14122d 0%, #070713 68%, #04040a 100%);
+      transition: background 0.55s ease;
+    }
+
+    .studio-grain {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.032;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+
+    #ambientParticles {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Glass Surfaces */
+    .glass-pill {
+      background: rgba(15, 16, 32, 0.65);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.10);
+    }
+
+    .portal-tile {
+      background: rgba(16, 17, 34, 0.58);
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+      border: 1px solid rgba(255, 255, 255, 0.09);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+                  border-color 0.28s ease,
+                  background-color 0.28s ease,
+                  box-shadow 0.28s ease;
+    }
+
+    .portal-tile:hover {
+      transform: translateY(-3px);
+      border-color: rgba(245, 208, 122, 0.45);
+      background: rgba(26, 24, 52, 0.78);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.42), 0 0 24px rgba(139, 92, 246, 0.18);
+    }
+
+    /* Slow Celestial Astrolabe Rotation on Home Lobby */
+    @keyframes spinSlow {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    @keyframes spinReverseSlow {
+      from { transform: rotate(360deg); }
+      to { transform: rotate(0deg); }
+    }
+
+    .astrolabe-outer {
+      transform-origin: 120px 120px;
+      animation: spinSlow 48s linear infinite;
+    }
+
+    .astrolabe-inner {
+      transform-origin: 120px 120px;
+      animation: spinReverseSlow 34s linear infinite;
+    }
+
+    /* Screen Transitions & Card Reveal */
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(18px) scale(0.97);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .screen-enter {
+      animation: fadeUp 0.52s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    .reveal-card {
+      opacity: 0;
+      animation: fadeUp 0.62s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+    }
+
+    /* Depth-of-Field Sibling Dimming in Grid Mode */
+    #galleryGrid.has-hover .gallery-item:not(.is-focused) {
+      opacity: 0.62;
+      filter: saturate(0.84);
+      transform: scale(0.975);
+    }
+
+    .gallery-item {
+      transition: opacity 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                  filter 0.36s cubic-bezier(0.22, 1, 0.36, 1),
+                  transform 0.40s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .gallery-item.is-focused {
+      z-index: 15;
+      transform: scale(1.035);
+    }
+
+    /* 3D Holo Card Engine (Unified Skirk Cosmos SAR Style) */
+    .holo-slot {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      perspective: 1150px;
+      user-select: none;
+      touch-action: manipulation;
+    }
+
+    .holo-shadow {
+      position: absolute;
+      top: 14px;
+      width: 84%;
+      aspect-ratio: 2 / 3;
+      border-radius: 18px;
+      background: radial-gradient(ellipse at center, rgba(10, 8, 28, 0.92) 0%, color-mix(in srgb, var(--card-glow, #8b5cf6) 26%, transparent) 58%, transparent 80%);
+      filter: blur(22px);
+      transform: translate3d(var(--sx, 0px), var(--sy, 22px), -85px) scale(0.94);
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .holo-card {
+      position: relative;
+      width: 100%;
+      max-width: 244px;
+      aspect-ratio: 2 / 3;
+      transform-style: preserve-3d;
+      transform: translateY(var(--fy, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)) rotateZ(var(--rz, 0deg));
+      will-change: transform;
+      cursor: pointer;
+      z-index: 5;
+    }
+
+    .holo-card.stage-size {
+      max-width: 292px;
+    }
+
+    .holo-card.spotlight-size {
+      max-width: 316px;
+    }
+
+    .holo-flip {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      transform-style: preserve-3d;
+      transition: transform 0.78s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .holo-flip.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .thickness-layer {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #dfbc6c 0%, #8f74d1 48%, #e6d8ad 100%);
+      box-shadow: inset 0 0 2px rgba(255, 255, 255, 0.55);
+      pointer-events: none;
+      backface-visibility: visible;
+    }
+
+    .card-face {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      overflow: hidden;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+    }
+
+    .card-front {
+      transform: translateZ(1px);
+      background: #f6f4fb;
+      box-shadow:
+        0 0 0 1px rgba(255, 255, 255, 0.22),
+        0 18px 42px rgba(0, 0, 0, 0.5);
+    }
+
+    .card-back {
+      transform: rotateY(180deg) translateZ(9px);
+      background: #0a0917;
+      box-shadow:
+        0 0 0 1px rgba(245, 208, 122, 0.35),
+        0 18px 42px rgba(0, 0, 0, 0.6);
+    }
+
+    .card-back-art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    .back-holo-foil {
+      position: absolute;
+      inset: -16%;
+      pointer-events: none;
+      mix-blend-mode: color-dodge;
+      opacity: 0.26;
+      background-image:
+        repeating-linear-gradient(
+          calc(128deg + var(--hue, 0deg) * 0.4),
+          rgba(255, 214, 118, 0.65) 0%,
+          rgba(180, 140, 255, 0.68) 24%,
+          rgba(110, 215, 255, 0.65) 50%,
+          rgba(255, 195, 130, 0.65) 76%,
+          rgba(255, 214, 118, 0.65) 100%
+        );
+      background-size: 220% 220%;
+      background-position: var(--mx, 50%) var(--my, 50%);
+      z-index: 2;
+    }
+
+    .back-holo-sweep {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0.36;
+      background:
+        linear-gradient(
+          118deg,
+          transparent calc(var(--sweep, 50%) - 20%),
+          rgba(253, 230, 138, 0.25) calc(var(--sweep, 50%) - 8%),
+          rgba(255, 255, 255, 0.65) var(--sweep, 50%),
+          rgba(196, 181, 253, 0.25) calc(var(--sweep, 50%) + 8%),
+          transparent calc(var(--sweep, 50%) + 20%)
+        );
+      z-index: 3;
+    }
+
+    .back-overlay-ui {
+      position: relative;
+      z-index: 5;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 18px 18px 16px;
+      background: linear-gradient(
+        180deg,
+        rgba(7, 6, 18, 0.72) 0%,
+        rgba(7, 6, 18, 0.06) 24%,
+        rgba(7, 6, 18, 0.04) 64%,
+        rgba(7, 6, 18, 0.88) 86%,
+        rgba(7, 6, 18, 0.95) 100%
+      );
+    }
+
+    .card-art {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      pointer-events: none;
+      filter: contrast(1.07) saturate(1.06);
+    }
+
+    .holo-pearl {
+      position: absolute;
+      inset: -16%;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+      opacity: 0.20;
+      background-image:
+        repeating-linear-gradient(
+          calc(126deg + var(--hue, 0deg) * 0.4),
+          rgba(232, 168, 255, 0.52) 0%,
+          rgba(155, 224, 255, 0.56) 20%,
+          rgba(255, 232, 165, 0.50) 40%,
+          rgba(255, 178, 224, 0.54) 60%,
+          rgba(165, 185, 255, 0.56) 80%,
+          rgba(232, 168, 255, 0.52) 100%
+        );
+      background-size: 230% 230%;
+      background-position: var(--mx, 50%) var(--my, 50%);
+      z-index: 3;
+    }
+
+    .holo-diffraction {
+      position: absolute;
+      inset: -16%;
+      pointer-events: none;
+      mix-blend-mode: color-dodge;
+      opacity: 0.14;
+      background-image:
+        repeating-linear-gradient(
+          calc(132deg + var(--hue, 0deg) * 0.35),
+          rgba(255, 105, 185, 0.65) 0%,
+          rgba(255, 220, 115, 0.65) 18%,
+          rgba(95, 240, 200, 0.65) 36%,
+          rgba(90, 195, 255, 0.72) 54%,
+          rgba(175, 125, 255, 0.72) 72%,
+          rgba(255, 105, 185, 0.65) 90%,
+          rgba(255, 220, 115, 0.65) 100%
+        );
+      background-size: 240% 240%;
+      background-position: var(--mx, 50%) var(--my, 50%);
+      z-index: 4;
+    }
+
+    .holo-cosmos {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: multiply;
+      opacity: 0.30;
+      background-image:
+        radial-gradient(circle at 18% 20%, rgba(139, 92, 246, 0.38) 0px, rgba(139, 92, 246, 0.14) 10px, transparent 18px),
+        radial-gradient(circle at 84% 26%, rgba(56, 189, 248, 0.38) 0px, rgba(56, 189, 248, 0.12) 11px, transparent 20px),
+        radial-gradient(circle at 22% 76%, rgba(244, 114, 182, 0.34) 0px, rgba(244, 114, 182, 0.10) 12px, transparent 22px),
+        radial-gradient(circle at 80% 78%, rgba(167, 139, 250, 0.36) 0px, rgba(167, 139, 250, 0.12) 10px, transparent 19px),
+        radial-gradient(circle at 52% 14%, rgba(251, 191, 36, 0.32) 0px, transparent 13px),
+        repeating-linear-gradient(
+          -42deg,
+          rgba(99, 102, 241, 0.08) 0px,
+          rgba(99, 102, 241, 0.08) 1px,
+          transparent 1px,
+          transparent 4px
+        );
+      background-position:
+        calc(var(--mx, 50%) * 0.25) calc(var(--my, 50%) * 0.25),
+        calc(100% - var(--mx, 50%) * 0.2) calc(var(--my, 50%) * 0.3),
+        calc(var(--mx, 50%) * 0.3) calc(100% - var(--my, 50%) * 0.2),
+        calc(100% - var(--mx, 50%) * 0.25) calc(100% - var(--my, 50%) * 0.25),
+        50% 50%,
+        0 0;
+      z-index: 5;
+    }
+
+    .holo-sweep {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      mix-blend-mode: screen;
+      opacity: 0.34;
+      background:
+        linear-gradient(
+          118deg,
+          transparent calc(var(--sweep, 50%) - 10%),
+          rgba(125, 211, 252, 0.22) calc(var(--sweep, 50%) - 4%),
+          rgba(255, 255, 255, 0.58) var(--sweep, 50%),
+          rgba(216, 180, 254, 0.22) calc(var(--sweep, 50%) + 4%),
+          transparent calc(var(--sweep, 50%) + 10%)
+        );
+      transition: opacity 0.25s ease;
+      z-index: 6;
+    }
+
+    .holo-card:hover .holo-sweep {
+      opacity: 0.48;
+    }
+
+    .card-stars {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 7;
+    }
+
+    .bevel-rim {
+      position: absolute;
+      inset: 0;
+      border-radius: 16px;
+      padding: 4px;
+      background: linear-gradient(
+        calc(125deg + var(--hue, 0deg)),
+        #f5d07a 0%,
+        #e0f2fe 26%,
+        #a78bfa 52%,
+        #f5d07a 78%,
+        #e0f2fe 100%
+      );
+      -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+      -webkit-mask-composite: xor;
+      mask-composite: exclude;
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .bevel-inner-line {
+      position: absolute;
+      inset: 7px;
+      border-radius: 11px;
+      border: 1px solid rgba(196, 181, 253, 0.52);
+      pointer-events: none;
+      z-index: 8;
+    }
+
+    .carousel-flank {
+      opacity: 0.42;
+      filter: blur(1.2px) saturate(0.75);
+      transform: scale(0.76);
+      transition: all 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      cursor: pointer;
+    }
+
+    .carousel-flank:hover {
+      opacity: 0.72;
+      filter: blur(0px) saturate(0.95);
+      transform: scale(0.82);
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 40;
+      background: rgba(5, 5, 14, 0.86);
+      backdrop-filter: blur(22px);
+      -webkit-backdrop-filter: blur(22px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .modal-backdrop.open {
+      opacity: 1;
+      pointer-events: auto;
+    }
+
+    .modal-shell {
+      transform: translateY(14px) scale(0.97);
+      transition: transform 0.38s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .modal-backdrop.open .modal-shell {
+      transform: translateY(0) scale(1);
+    }
+  </style>
+</head>
+<body>
+  <div class="studio-backdrop"></div>
+  <div class="studio-grain"></div>
+  <canvas id="ambientParticles"></canvas>
+
+  <!-- ======================================================================= -->
+  <!-- SCREEN 1: HOME LOBBY (主界面大厅 · 进站仪式感，不直接堆砌卡片)              -->
+  <!-- ======================================================================= -->
+  <section id="homeScreen" class="relative z-10 max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12 min-h-screen flex flex-col justify-between screen-enter">
+    <!-- Minimal Home Top Strip -->
+    <div class="flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg flex items-center justify-center bg-gradient-to-br from-amber-300/20 via-violet-400/25 to-sky-400/20 border border-amber-200/30">
+          <i data-lucide="sparkles" class="w-4 h-4 text-amber-200"></i>
+        </div>
+        <span class="text-xs font-semibold tracking-[0.2em] uppercase text-slate-300">TEYVAT SAR ARCHIVE</span>
+      </div>
+
+      <button id="homeSoundBtn" type="button" class="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs text-slate-300 hover:text-amber-200 transition" aria-label="切换音效">
+        <i data-lucide="volume-x" class="w-3.5 h-3.5"></i>
+        <span>音效：关</span>
+      </button>
+    </div>
+
+    <!-- Centerpiece Hero & Entry Portals -->
+    <div class="my-auto py-8 flex flex-col items-center text-center">
+      <!-- Rotating Celestial Astrolabe Emblem -->
+      <div class="relative w-36 h-36 sm:w-44 sm:h-44 mb-5 flex items-center justify-center">
+        <div class="absolute inset-0 rounded-full blur-2xl opacity-45" style="background: radial-gradient(circle, rgba(167,139,250,0.55), rgba(56,189,248,0.22), transparent 70%);"></div>
+        <svg viewBox="0 0 240 240" class="w-full h-full relative z-10" fill="none">
+          <defs>
+            <linearGradient id="goldVioletGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#fde68a" />
+              <stop offset="50%" stop-color="#c4b5fd" />
+              <stop offset="100%" stop-color="#7dd3fc" />
+            </linearGradient>
+          </defs>
+          <g class="astrolabe-outer" stroke="url(#goldVioletGrad)" stroke-opacity="0.72">
+            <circle cx="120" cy="120" r="106" stroke-width="1" stroke-dasharray="4 6" />
+            <circle cx="120" cy="120" r="92" stroke-width="1.2" />
+            <circle cx="120" cy="14" r="4" fill="#fde68a" />
+            <circle cx="120" cy="226" r="3" fill="#c4b5fd" />
+            <circle cx="14" cy="120" r="3" fill="#7dd3fc" />
+            <circle cx="226" cy="120" r="3" fill="#fde68a" />
+          </g>
+          <g class="astrolabe-inner" stroke="url(#goldVioletGrad)" stroke-opacity="0.88">
+            <circle cx="120" cy="120" r="68" stroke-width="1" />
+            <polygon points="120,34 132,108 206,120 132,132 120,206 108,132 34,120 108,108" stroke-width="1.2" fill="url(#goldVioletGrad)" fill-opacity="0.10" />
+            <polygon points="120,58 134,106 182,120 134,134 120,182 106,134 58,120 106,106" stroke-width="0.9" transform="rotate(45 120 120)" />
+          </g>
+          <circle cx="120" cy="120" r="10" fill="url(#goldVioletGrad)" />
+        </svg>
+      </div>
+
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-violet-400/12 border border-violet-300/25 text-[11px] font-medium text-violet-200 tracking-wider mb-3">
+        <span>HAND-DRAWN DOODLE · COSMOS SAR FOIL</span>
+      </div>
+
+      <h1 class="text-3xl sm:text-5xl font-bold tracking-tight text-white">
+        提瓦特全息闪卡馆
+      </h1>
+      <p class="mt-3 text-sm sm:text-base text-slate-300/85 max-w-xl leading-relaxed">
+        收录 48 位原神五星角色手绘涂鸦典藏卡，统一搭载 Cosmos 珠光虹彩、8 层幻彩紫金卡边与星象罗盘全息卡背。请选择下方展区进入赏析。
+      </p>
+
+      <!-- Primary Entry CTA -->
+      <div class="mt-7 flex flex-wrap items-center justify-center gap-3">
+        <button id="btnEnterAll" type="button" class="group inline-flex items-center gap-2.5 px-7 py-3.5 rounded-full text-sm font-semibold text-slate-950 bg-gradient-to-r from-amber-200 via-violet-200 to-sky-200 hover:brightness-110 shadow-xl shadow-violet-950/50 transition transform hover:-translate-y-0.5">
+          <i data-lucide="sparkles" class="w-4 h-4"></i>
+          进入全部典藏馆
+          <span class="font-mono text-xs px-2 py-0.5 rounded-full bg-slate-950/15">48</span>
+          <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-0.5 transition-transform"></i>
+        </button>
+      </div>
+
+      <!-- Portal Filter Matrix (Region & Element Direct Entry) -->
+      <div class="mt-10 w-full max-w-4xl flex flex-col gap-5">
+        <!-- By Element -->
+        <div>
+          <div class="text-[11px] font-medium tracking-widest uppercase text-slate-400 mb-2.5 flex items-center justify-center gap-2">
+            <span class="w-8 h-px bg-white/15"></span>
+            按元素进入展区
+            <span class="w-8 h-px bg-white/15"></span>
+          </div>
+          <div id="homeElementPortals" class="flex flex-wrap items-center justify-center gap-2.5"></div>
+        </div>
+
+        <!-- By Region -->
+        <div>
+          <div class="text-[11px] font-medium tracking-widest uppercase text-slate-400 mb-2.5 flex items-center justify-center gap-2">
+            <span class="w-8 h-px bg-white/15"></span>
+            按国度进入展区
+            <span class="w-8 h-px bg-white/15"></span>
+          </div>
+          <div id="homeRegionPortals" class="flex flex-wrap items-center justify-center gap-2.5"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Minimal Home Footer -->
+    <div class="text-center text-[11px] text-slate-500 tracking-wider">
+      VOL.01 · 48 FIVE-STAR CHARACTERS · 7 ELEMENTS · 7 REGIONS
+    </div>
+  </section>
+
+  <!-- ======================================================================= -->
+  <!-- SCREEN 2: EXHIBITION GALLERY (闪卡展馆 · 仅在选择入口后展示对应卡片)        -->
+  <!-- ======================================================================= -->
+  <div id="galleryScreen" class="hidden relative z-10 max-w-6xl mx-auto px-4 sm:px-6 py-5 sm:py-7 flex-col min-h-screen">
+    <!-- Top Navigation Bar -->
+    <header class="flex flex-wrap items-center justify-between gap-3 mb-5">
+      <div class="flex items-center gap-3">
+        <button id="btnBackHome" type="button" class="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-slate-200 hover:text-amber-200 hover:border-amber-200/40 transition">
+          <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i>
+          主界面
+        </button>
+        <div>
+          <h2 id="galleryHeading" class="text-base sm:text-lg font-semibold tracking-wide text-white flex items-center gap-2">
+            全部典藏闪卡
+            <span id="galleryCountBadge" class="text-[11px] font-mono px-2 py-0.5 rounded-full bg-amber-300/15 text-amber-200 border border-amber-300/30">12 张</span>
+          </h2>
+        </div>
+      </div>
+
+      <!-- Minimal View & Sensory Controls -->
+      <div class="flex items-center gap-2 flex-wrap">
+        <div class="glass-pill rounded-full p-1 inline-flex items-center gap-0.5">
+          <button id="btnViewGrid" type="button" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/14 text-white transition">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+            展柜
+          </button>
+          <button id="btnViewStage" type="button" class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-400 hover:text-white transition">
+            <i data-lucide="gallery-horizontal-end" class="w-3.5 h-3.5"></i>
+            展台
+          </button>
+        </div>
+
+        <button id="btnAmbientFloat" type="button" class="glass-pill inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium text-violet-100 hover:bg-white/10 transition">
+          <i data-lucide="orbit" class="w-3.5 h-3.5 text-amber-200"></i>
+          <span id="ambientFloatLabel">微浮：开</span>
+        </button>
+
+        <button id="btnSoundToggle" type="button" class="glass-pill w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:text-amber-200 transition" aria-label="切换音效">
+          <i data-lucide="volume-x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+    </header>
+
+    <!-- Compact Live Filter Bar -->
+    <nav class="glass-pill rounded-2xl p-2.5 mb-7 flex flex-wrap items-center justify-between gap-2.5">
+      <div class="flex items-center gap-1.5 flex-wrap" id="galleryFilterTabs"></div>
+      <div class="flex items-center gap-1 shrink-0 bg-black/35 rounded-full p-0.5 border border-white/10">
+        <button id="filterModeElement" type="button" class="px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/14 text-white transition">按元素</button>
+        <button id="filterModeRegion" type="button" class="px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-400 hover:text-white transition">按国度</button>
+      </div>
+    </nav>
+
+    <!-- View 1: Museum Showcase Grid -->
+    <main id="viewGridContainer" class="my-auto">
+      <div id="galleryGrid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 sm:gap-7 items-start justify-items-center"></div>
+    </main>
+
+    <!-- View 2: Focused 3D Carousel Stage -->
+    <section id="viewStageContainer" class="hidden my-auto flex-col items-center gap-6">
+      <div class="w-full flex items-center justify-center gap-3 sm:gap-8">
+        <button id="stagePrevCard" type="button" class="hidden md:block carousel-flank w-44 rounded-2xl overflow-hidden border border-white/15 bg-black/40 p-0 text-left" aria-label="上一张">
+          <img id="stagePrevImg" src="" alt="上一张卡片" class="w-full aspect-[2/3] object-cover" />
+        </button>
+
+        <button id="stagePrevBtn" type="button" class="glass-pill w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-slate-200 hover:text-amber-200 hover:border-amber-200/40 transition" aria-label="上一张">
+          <i data-lucide="chevron-left" class="w-5 h-5"></i>
+        </button>
+
+        <div id="stageCenterSlot" class="holo-slot w-full max-w-[292px]"></div>
+
+        <button id="stageNextBtn" type="button" class="glass-pill w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-slate-200 hover:text-amber-200 hover:border-amber-200/40 transition" aria-label="下一张">
+          <i data-lucide="chevron-right" class="w-5 h-5"></i>
+        </button>
+
+        <button id="stageNextCard" type="button" class="hidden md:block carousel-flank w-44 rounded-2xl overflow-hidden border border-white/15 bg-black/40 p-0 text-left" aria-label="下一张">
+          <img id="stageNextImg" src="" alt="下一张卡片" class="w-full aspect-[2/3] object-cover" />
+        </button>
+      </div>
+
+      <div class="glass-pill rounded-2xl px-5 py-3.5 max-w-xl w-full flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div class="flex items-center gap-2">
+            <span id="stageCardName" class="text-sm font-semibold text-white">丝柯克</span>
+            <span id="stageCardEn" class="text-xs text-slate-400">Skirk · 虚境极星</span>
+            <span id="stageCardBadge" class="text-[10px] px-2 py-0.5 rounded-full bg-violet-400/15 text-violet-200 border border-violet-300/25">冰 · 深渊</span>
+          </div>
+          <p id="stageCardLore" class="text-xs text-slate-400 mt-1"></p>
+        </div>
+        <div class="flex items-center gap-2 shrink-0">
+          <button id="stageFlipBtn" type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-amber-300/15 text-amber-100 border border-amber-300/35 hover:bg-amber-300/25 transition">
+            <i data-lucide="repeat-2" class="w-3.5 h-3.5"></i>
+            翻转卡背
+          </button>
+          <span id="stageCounter" class="text-xs font-mono text-slate-400 pl-1">01 / 12</span>
+        </div>
+      </div>
+
+      <div id="stageDots" class="flex items-center gap-2"></div>
+    </section>
+
+    <!-- Minimal Curatorial Footer -->
+    <footer class="mt-9 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-500 border-t border-white/[0.06] pt-4">
+      <span class="tracking-wider">TEYVAT HAND-DRAWN DOODLE EDITION · 48 FIVE-STAR CARDS</span>
+      <span class="hidden sm:inline">快捷键：<kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">←</kbd> <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">→</kbd> 切换 · <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">Space</kbd> 翻面 · <kbd class="px-1.5 py-0.5 rounded bg-white/5 text-slate-300 font-mono text-[10px]">Esc</kbd> 关闭</span>
+    </footer>
+  </div>
+
+  <!-- Spotlight 3D Inspection Modal -->
+  <div id="spotlightModal" class="modal-backdrop p-4" aria-hidden="true">
+    <div class="modal-shell relative w-full max-w-3xl glass-pill rounded-3xl p-5 sm:p-7 border border-white/12 shadow-2xl">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2.5">
+          <span id="modalCounter" class="font-mono text-xs text-amber-200/90 px-2.5 py-0.5 rounded-full bg-amber-300/10 border border-amber-300/25">SAR-01</span>
+          <span id="modalElement" class="text-xs text-slate-300">冰 · 深渊</span>
+        </div>
+        <button id="modalCloseBtn" type="button" class="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-slate-200 transition" aria-label="关闭">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-12 gap-6 items-center">
+        <div class="md:col-span-7 flex items-center justify-center gap-3">
+          <button id="modalPrevBtn" type="button" class="w-9 h-9 shrink-0 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-slate-100 transition" aria-label="上一张">
+            <i data-lucide="chevron-left" class="w-5 h-5"></i>
+          </button>
+          <div id="spotlightSlot" class="holo-slot w-full max-w-[290px] sm:max-w-[316px]"></div>
+          <button id="modalNextBtn" type="button" class="w-9 h-9 shrink-0 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 flex items-center justify-center text-slate-100 transition" aria-label="下一张">
+            <i data-lucide="chevron-right" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="md:col-span-5 flex flex-col gap-4">
+          <div>
+            <div class="text-[11px] tracking-widest uppercase text-amber-200/80 mb-1">TEYVAT COLLECTOR ARCHIVE</div>
+            <h3 id="modalTitle" class="text-2xl font-bold tracking-wide text-white">丝柯克</h3>
+            <div id="modalSubtitle" class="text-xs text-slate-300 mt-0.5">Skirk · 虚境极星</div>
+          </div>
+
+          <p id="modalLore" class="text-xs leading-relaxed text-slate-300/90 border-l-2 border-amber-300/45 pl-3"></p>
+
+          <div class="grid grid-cols-2 gap-2.5 text-[11px]">
+            <div class="rounded-xl bg-white/[0.04] border border-white/8 p-2.5">
+              <div class="text-slate-400">全息工艺</div>
+              <div class="text-slate-100 font-medium mt-0.5">Cosmos 宇宙星斑</div>
+            </div>
+            <div class="rounded-xl bg-white/[0.04] border border-white/8 p-2.5">
+              <div class="text-slate-400">金属卡边</div>
+              <div class="text-amber-200 font-medium mt-0.5">幻彩紫金 · 8 层</div>
+            </div>
+          </div>
+
+          <button id="modalFlipBtn" type="button" class="inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-medium bg-gradient-to-r from-violet-500/35 to-amber-400/25 hover:from-violet-500/45 hover:to-amber-400/35 text-white border border-amber-200/35 transition">
+            <i data-lucide="repeat-2" class="w-4 h-4"></i>
+            <span id="modalFlipLabel">翻转查看卡背</span>
+          </button>
+
+          <div class="text-[11px] text-slate-400 flex items-center gap-1.5">
+            <i data-lucide="mouse-pointer-2" class="w-3.5 h-3.5 text-violet-300"></i>
+            移动光标实时倾摆 · 双击卡片或按空格键翻面
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 12 Five-Star Genshin Impact Hand-Drawn Doodle SAR Cards + Bespoke Card Back
+    // =========================================================================
+    const CARD_BACK_ART = "assets/cards/card_back.jpg";
+
+    const ELEMENTS = [
+      { key: "冰", label: "冰元素", dot: "#7dd3fc" },
+      { key: "水", label: "水元素", dot: "#3b82f6" },
+      { key: "雷", label: "雷元素", dot: "#c084fc" },
+      { key: "岩", label: "岩元素", dot: "#fbbf24" },
+      { key: "风", label: "风元素", dot: "#34d399" },
+      { key: "草", label: "草元素", dot: "#a3e635" },
+      { key: "火", label: "火元素", dot: "#fb7185" }
+    ];
+
+    const REGIONS = [
+      { key: "蒙德", label: "蒙德" },
+      { key: "璃月", label: "璃月" },
+      { key: "稻妻", label: "稻妻" },
+      { key: "须弥", label: "须弥" },
+      { key: "枫丹", label: "枫丹" },
+      { key: "纳塔", label: "纳塔" },
+      { key: "至冬·深渊", label: "至冬 / 深渊" }
+    ];
+
+    const CARDS = [
+      {
+        id: "skirk", num: "01", name: "丝柯克", enName: "Skirk", title: "虚境极星",
+        code: "TEYVAT · SAR-01", element: "冰", region: "至冬·深渊",
+        glow: "#8b5cf6", glow2: "#38bdf8",
+        lore: "来自深渊尽头的孤高剑师，银紫长发与蓝晶发饰在 Cosmos 星斑下流转幽蓝微光。",
+        image: "assets/cards/01_skirk.jpg",
+        stars: [{ u: 0.16, v: 0.27, size: 17, color: "#38bdf8" }, { u: 0.78, v: 0.27, size: 16, color: "#f5d07a" }, { u: 0.89, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "furina", num: "02", name: "芙宁娜", enName: "Furina", title: "不休独舞",
+        code: "TEYVAT · SAR-02", element: "水", region: "枫丹",
+        glow: "#3b82f6", glow2: "#38bdf8",
+        lore: "聚光灯下的枫丹明星，小礼帽与异色双眸在珠光虹彩中诉说五百年的盛大剧目。",
+        image: "assets/cards/02_furina.jpg",
+        stars: [{ u: 0.73, v: 0.17, size: 18, color: "#60a5fa" }, { u: 0.49, v: 0.60, size: 16, color: "#38bdf8" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "raiden", num: "03", name: "雷电将军", enName: "Raiden Shogun", title: "一心净土",
+        code: "TEYVAT · SAR-03", element: "雷", region: "稻妻",
+        glow: "#a855f7", glow2: "#f472b6",
+        lore: "鸣神永恒的化身，紫罗兰麻花辫与折扇樱花发饰在幻彩紫金光晕下更显威仪。",
+        image: "assets/cards/03_raiden.jpg",
+        stars: [{ u: 0.24, v: 0.21, size: 18, color: "#f5d07a" }, { u: 0.82, v: 0.65, size: 16, color: "#c084fc" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
+      },
+      {
+        id: "zhongli", num: "04", name: "钟离", enName: "Zhongli", title: "尘世闲游",
+        code: "TEYVAT · SAR-04", element: "岩", region: "璃月",
+        glow: "#d97706", glow2: "#fbbf24",
+        lore: "契约之神漫步人间，琥珀金发梢与菱形耳坠在微蚀刻全息扫光中折射温润光泽。",
+        image: "assets/cards/04_zhongli.jpg",
+        stars: [{ u: 0.70, v: 0.42, size: 17, color: "#fbbf24" }, { u: 0.49, v: 0.63, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "venti", num: "05", name: "温迪", enName: "Venti", title: "风色诗人",
+        code: "TEYVAT · SAR-05", element: "风", region: "蒙德",
+        glow: "#10b981", glow2: "#38bdf8",
+        lore: "蒙德城自由的吟游诗人，塞西莉亚花与青绿双辫随高天之风轻轻摇曳。",
+        image: "assets/cards/05_venti.jpg",
+        stars: [{ u: 0.73, v: 0.21, size: 18, color: "#34d399" }, { u: 0.67, v: 0.90, size: 16, color: "#6ee7b7" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "nahida", num: "06", name: "纳西妲", enName: "Nahida", title: "白草净华",
+        code: "TEYVAT · SAR-06", element: "草", region: "须弥",
+        glow: "#84cc16", glow2: "#34d399",
+        lore: "净善宫中的智慧之神，翠绿叶饰与四叶草星眸盛满温柔的须弥梦境。",
+        image: "assets/cards/06_nahida.jpg",
+        stars: [{ u: 0.68, v: 0.21, size: 18, color: "#a3e635" }, { u: 0.53, v: 0.52, size: 15, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#86efac" }]
+      },
+      {
+        id: "mavuika", num: "07", name: "玛薇卡", enName: "Mavuika", title: "焚夜以炎",
+        code: "TEYVAT · SAR-07", element: "火", region: "纳塔",
+        glow: "#f97316", glow2: "#facc15",
+        lore: "照耀纳塔的太阳之神，炽烈红金长发与熔金眼眸如不熄圣火般耀眼。",
+        image: "assets/cards/07_mavuika.jpg",
+        stars: [{ u: 0.52, v: 0.54, size: 17, color: "#fbbf24" }, { u: 0.78, v: 0.67, size: 16, color: "#fb923c" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "hutao", num: "08", name: "胡桃", enName: "Hu Tao", title: "雪霁梅香",
+        code: "TEYVAT · SAR-08", element: "火", region: "璃月",
+        glow: "#ef4444", glow2: "#f59e0b",
+        lore: "往生堂第七十七代堂主，梅花瞳与朱红帽饰透出古灵精怪的璃月烟火气。",
+        image: "assets/cards/08_hutao.jpg",
+        stars: [{ u: 0.44, v: 0.12, size: 18, color: "#fde68a" }, { u: 0.72, v: 0.17, size: 17, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#f5d07a" }]
+      },
+      {
+        id: "kazuha", num: "09", name: "枫原万叶", enName: "Kaedehara Kazuha", title: "红叶逐荒波",
+        code: "TEYVAT · SAR-09", element: "风", region: "稻妻",
+        glow: "#ef4444", glow2: "#34d399",
+        lore: "云游四海的稻妻浪人武士，一缕枫红挑染与自在清风伴随剑影同行。",
+        image: "assets/cards/09_kazuha.jpg",
+        stars: [{ u: 0.65, v: 0.66, size: 17, color: "#fca5a5" }, { u: 0.24, v: 0.28, size: 15, color: "#f87171" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "ayaka", num: "10", name: "神里绫华", enName: "Kamisato Ayaka", title: "白鹭霜华",
+        code: "TEYVAT · SAR-10", element: "冰", region: "稻妻",
+        glow: "#38bdf8", glow2: "#f472b6",
+        lore: "社奉行神里家大小姐，霜蓝姬发与金甲发冠如雪夜中翩然起舞的白鹭。",
+        image: "assets/cards/10_ayaka.jpg",
+        stars: [{ u: 0.54, v: 0.08, size: 18, color: "#fde68a" }, { u: 0.45, v: 0.72, size: 16, color: "#7dd3fc" }, { u: 0.90, v: 0.08, size: 15, color: "#f9a8d4" }]
+      },
+      {
+        id: "neuvillette", num: "11", name: "那维莱特", enName: "Neuvillette", title: "谕告的潮音",
+        code: "TEYVAT · SAR-11", element: "水", region: "枫丹",
+        glow: "#2563eb", glow2: "#67e8f9",
+        lore: "枫丹最高审判官，银白长发与幽蓝龙角在静谧潮音中裁定世间公正。",
+        image: "assets/cards/11_neuvillette.jpg",
+        stars: [{ u: 0.72, v: 0.16, size: 18, color: "#67e8f9" }, { u: 0.51, v: 0.55, size: 17, color: "#60a5fa" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "arlecchino", num: "12", name: "阿蕾奇诺", enName: "Arlecchino", title: "孤暝厄月",
+        code: "TEYVAT · SAR-12", element: "火", region: "至冬·深渊",
+        glow: "#e11d48", glow2: "#a855f7",
+        lore: "愚人众执行官第四席「仆人」，黑白挑染与赤月十字瞳散发冷峻威压。",
+        image: "assets/cards/12_arlecchino.jpg",
+        stars: [{ u: 0.50, v: 0.58, size: 18, color: "#fb7185" }, { u: 0.28, v: 0.42, size: 14, color: "#fda4af" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "xiao", num: "13", name: "魈", enName: "Xiao", title: "护法夜叉",
+        code: "TEYVAT · SAR-13", element: "风", region: "璃月",
+        glow: "#14b8a6", glow2: "#a855f7",
+        lore: "守护璃月千年的降魔大圣，青翠发挑与眉间紫菱在微光流转中透出冷峻锋芒。",
+        image: "assets/cards/13_xiao.jpg",
+        stars: [{ u: 0.47, v: 0.29, size: 15, color: "#c084fc" }, { u: 0.78, v: 0.60, size: 17, color: "#2dd4bf" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "ganyu", num: "14", name: "甘雨", enName: "Ganyu", title: "循循守月",
+        code: "TEYVAT · SAR-14", element: "冰", region: "璃月",
+        glow: "#60a5fa", glow2: "#f59e0b",
+        lore: "流淌着麒麟血脉的月海亭秘书，浅蓝发丝与颈间金铃在星斑折射下温婉灵动。",
+        image: "assets/cards/14_ganyu.jpg",
+        stars: [{ u: 0.49, v: 0.57, size: 18, color: "#fde68a" }, { u: 0.74, v: 0.16, size: 15, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "yaemiko", num: "15", name: "八重神子", enName: "Yae Miko", title: "浮世笑百姿",
+        code: "TEYVAT · SAR-15", element: "雷", region: "稻妻",
+        glow: "#f472b6", glow2: "#c084fc",
+        lore: "鸣神大社的大巫女与八重堂总编，樱粉狐耳与金紫耳坠间藏着狡黠温柔的笑意。",
+        image: "assets/cards/15_yaemiko.jpg",
+        stars: [{ u: 0.81, v: 0.40, size: 18, color: "#fde68a" }, { u: 0.50, v: 0.60, size: 17, color: "#f472b6" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "wanderer", num: "16", name: "流浪者", enName: "Wanderer", title: "久世浮倾",
+        code: "TEYVAT · SAR-16", element: "风", region: "须弥",
+        glow: "#38bdf8", glow2: "#3b82f6",
+        lore: "踏上新生旅途的孤高行者，宽檐蓝金笠帽与澄澈风之眼在全息扫光中如浮云轻逸。",
+        image: "assets/cards/16_wanderer.jpg",
+        stars: [{ u: 0.63, v: 0.70, size: 18, color: "#34d399" }, { u: 0.42, v: 0.16, size: 17, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#7dd3fc" }]
+      },
+      {
+        id: "alhaitham", num: "17", name: "艾尔海森", enName: "Alhaitham", title: "诲韬诤言",
+        code: "TEYVAT · SAR-17", element: "草", region: "须弥",
+        glow: "#10b981", glow2: "#f59e0b",
+        lore: "须弥教令院现任书记官，银灰发梢与翡翠耳机映出理性克制却锐利如镜的锋芒。",
+        image: "assets/cards/17_alhaitham.jpg",
+        stars: [{ u: 0.50, v: 0.62, size: 18, color: "#34d399" }, { u: 0.74, v: 0.35, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "navia", num: "18", name: "娜维娅", enName: "Navia", title: "明花蔓舵",
+        code: "TEYVAT · SAR-18", element: "岩", region: "枫丹",
+        glow: "#fbbf24", glow2: "#38bdf8",
+        lore: "刺玫会明朗耀眼的现任会长，金色卷发与蓝玫瑰礼帽在幻彩光泽中绽放温暖朝气。",
+        image: "assets/cards/18_navia.jpg",
+        stars: [{ u: 0.28, v: 0.20, size: 18, color: "#60a5fa" }, { u: 0.49, v: 0.58, size: 17, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#f5d07a" }]
+      },
+      {
+        id: "eula", num: "19", name: "优菈", enName: "Eula", title: "浪沫的旋舞",
+        code: "TEYVAT · SAR-19", element: "冰", region: "蒙德",
+        glow: "#38bdf8", glow2: "#a78bfa",
+        lore: "西风骑士团游击小队队长，霜蓝短发与银翼发饰在 Cosmos 虹彩间起舞如浪沫轻盈。",
+        image: "assets/cards/19_eula.jpg",
+        stars: [{ u: 0.76, v: 0.20, size: 18, color: "#7dd3fc" }, { u: 0.29, v: 0.62, size: 17, color: "#bae6fd" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "citlali", num: "20", name: "茜特菈莉", enName: "Citlali", title: "白星黑曜",
+        code: "TEYVAT · SAR-20", element: "冰", region: "纳塔",
+        glow: "#f472b6", glow2: "#38bdf8",
+        lore: "烟谜主的传奇大萨满，樱粉渐变浅紫发梢与部落发环在星辉中透出傲娇可爱。",
+        image: "assets/cards/20_citlali.jpg",
+        stars: [{ u: 0.74, v: 0.20, size: 18, color: "#67e8f9" }, { u: 0.50, v: 0.56, size: 16, color: "#f472b6" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "xilonen", num: "21", name: "希诺宁", enName: "Xilonen", title: "焮火铸魂",
+        code: "TEYVAT · SAR-21", element: "岩", region: "纳塔",
+        glow: "#fbbf24", glow2: "#10b981",
+        lore: "回声之子的天才锻造师，豹耳墨镜与鎏金耳环在全息折射下洋溢自由不羁的魅力。",
+        image: "assets/cards/21_xilonen.jpg",
+        stars: [{ u: 0.54, v: 0.55, size: 18, color: "#fde68a" }, { u: 0.68, v: 0.14, size: 15, color: "#fbbf24" }, { u: 0.90, v: 0.08, size: 15, color: "#34d399" }]
+      },
+      {
+        id: "yelan", num: "22", name: "夜兰", enName: "Yelan", title: "兰生幽谷",
+        code: "TEYVAT · SAR-22", element: "水", region: "璃月",
+        glow: "#2563eb", glow2: "#2dd4bf",
+        lore: "行踪莫测的璃月情报官，绒毛披肩与幽蓝骰子吊坠在扫光中暗藏神秘锋芒。",
+        image: "assets/cards/22_yelan.jpg",
+        stars: [{ u: 0.48, v: 0.60, size: 19, color: "#38bdf8" }, { u: 0.53, v: 0.51, size: 15, color: "#2dd4bf" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "shenhe", num: "23", name: "申鹤", enName: "Shenhe", title: "孤辰茕怀",
+        code: "TEYVAT · SAR-23", element: "冰", region: "璃月",
+        glow: "#7dd3fc", glow2: "#ef4444",
+        lore: "仙家门下修行的红绳驱魔人，银白霜发与绯红仙绳在冷冽星斑中清雅出尘。",
+        image: "assets/cards/23_shenhe.jpg",
+        stars: [{ u: 0.27, v: 0.20, size: 18, color: "#fde68a" }, { u: 0.45, v: 0.83, size: 15, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#bae6fd" }]
+      },
+      {
+        id: "yoimiya", num: "24", name: "宵宫", enName: "Yoimiya", title: "琉焰华舞",
+        code: "TEYVAT · SAR-24", element: "火", region: "稻妻",
+        glow: "#f97316", glow2: "#facc15",
+        lore: "长野原烟花店的夏祭女王，绚丽花火发饰与灿烂笑容点亮稻妻每一个夏夜。",
+        image: "assets/cards/24_yoimiya.jpg",
+        stars: [{ u: 0.28, v: 0.20, size: 19, color: "#fb923c" }, { u: 0.35, v: 0.46, size: 15, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#fbbf24" }]
+      },
+      {
+        id: "nilou", num: "25", name: "妮露", enName: "Nilou", title: "莲光落舞筵",
+        code: "TEYVAT · SAR-25", element: "水", region: "须弥",
+        glow: "#38bdf8", glow2: "#fb7185",
+        lore: "祖拜尔剧场的绯发舞者，蓝金莲冠与水色轻纱在柔光折射间翩然起舞。",
+        image: "assets/cards/25_nilou.jpg",
+        stars: [{ u: 0.49, v: 0.60, size: 18, color: "#38bdf8" }, { u: 0.47, v: 0.10, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#67e8f9" }]
+      },
+      {
+        id: "klee", num: "26", name: "可莉", enName: "Klee", title: "逃跑的太阳",
+        code: "TEYVAT · SAR-26", element: "火", region: "蒙德",
+        glow: "#ef4444", glow2: "#fde047",
+        lore: "西风骑士团的火花骑士，四叶草小红帽与元气双马尾盛满蒙德的明媚阳光。",
+        image: "assets/cards/26_klee.jpg",
+        stars: [{ u: 0.46, v: 0.12, size: 18, color: "#fde68a" }, { u: 0.59, v: 0.61, size: 16, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#fbbf24" }]
+      },
+      {
+        id: "tartaglia", num: "27", name: "达达利亚", enName: "Tartaglia", title: "公子",
+        code: "TEYVAT · SAR-27", element: "水", region: "至冬·深渊",
+        glow: "#3b82f6", glow2: "#ef4444",
+        lore: "愚人众执行官第十一席，侧戴赤红面具与流火围巾在冷蓝水光中跃跃欲试。",
+        image: "assets/cards/27_tartaglia.jpg",
+        stars: [{ u: 0.72, v: 0.19, size: 18, color: "#fb7185" }, { u: 0.30, v: 0.64, size: 16, color: "#60a5fa" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "vodyanitsa", num: "28", name: "沃雅妮莎", enName: "Vodyanitsa", title: "澄波吟咏",
+        code: "TEYVAT · SAR-28", element: "水", region: "至冬·深渊",
+        glow: "#14b8a6", glow2: "#38bdf8",
+        lore: "至冬科洛列夫茨基剧团的首席女高音，墨青卷发与珍珠海晶发饰在波光间悠然吟唱。",
+        image: "assets/cards/28_vodyanitsa.jpg",
+        stars: [{ u: 0.74, v: 0.21, size: 18, color: "#67e8f9" }, { u: 0.51, v: 0.54, size: 17, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#5eead4" }]
+      },
+      {
+        id: "kokomi", num: "29", name: "珊瑚宫心海", enName: "Sangonomiya Kokomi", title: "真珠之智",
+        code: "TEYVAT · SAR-29", element: "水", region: "稻妻",
+        glow: "#60a5fa", glow2: "#f9a8d4",
+        lore: "海祇岛的现人神巫女，粉蓝渐变长发与珍珠贝壳缎带如深海柔波般静谧温柔。",
+        image: "assets/cards/29_kokomi.jpg",
+        stars: [{ u: 0.48, v: 0.10, size: 17, color: "#bae6fd" }, { u: 0.48, v: 0.70, size: 17, color: "#f9a8d4" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "ayato", num: "30", name: "神里绫人", enName: "Kamisato Ayato", title: "磐祭叶守",
+        code: "TEYVAT · SAR-30", element: "水", region: "稻妻",
+        glow: "#3b82f6", glow2: "#93c5fd",
+        lore: "社奉行神里家现任家主，水蓝短发与白蓝礼服在清雅扫光间尽显从容气度。",
+        image: "assets/cards/30_ayato.jpg",
+        stars: [{ u: 0.74, v: 0.67, size: 16, color: "#fde68a" }, { u: 0.25, v: 0.67, size: 16, color: "#93c5fd" }, { u: 0.90, v: 0.08, size: 15, color: "#7dd3fc" }]
+      },
+      {
+        id: "keqing", num: "31", name: "刻晴", enName: "Keqing", title: "霆霓快雨",
+        code: "TEYVAT · SAR-31", element: "雷", region: "璃月",
+        glow: "#a855f7", glow2: "#fde68a",
+        lore: "璃月七星中的玉衡星，淡紫双髻与金菱发饰映出果敢雷厉的践行者风采。",
+        image: "assets/cards/31_keqing.jpg",
+        stars: [{ u: 0.72, v: 0.18, size: 18, color: "#fde68a" }, { u: 0.41, v: 0.74, size: 16, color: "#c084fc" }, { u: 0.90, v: 0.08, size: 15, color: "#a78bfa" }]
+      },
+      {
+        id: "xianyun", num: "32", name: "闲云", enName: "Xianyun", title: "鸾音鹤信",
+        code: "TEYVAT · SAR-32", element: "风", region: "璃月",
+        glow: "#10b981", glow2: "#fde68a",
+        lore: "隐居璃月港的留云借风真君，翠玉鹤簪与红框眼镜透出温雅博学的仙家气韵。",
+        image: "assets/cards/32_xianyun.jpg",
+        stars: [{ u: 0.34, v: 0.09, size: 18, color: "#34d399" }, { u: 0.51, v: 0.54, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "wriothesley", num: "33", name: "莱欧斯利", enName: "Wriothesley", title: "寂罪的密使",
+        code: "TEYVAT · SAR-33", element: "冰", region: "枫丹",
+        glow: "#64748b", glow2: "#ef4444",
+        lore: "梅洛彼得堡的公爵，冷冽银灰挑染与红黑毛领大衣在星光下散发沉稳气场。",
+        image: "assets/cards/33_wriothesley.jpg",
+        stars: [{ u: 0.50, v: 0.76, size: 16, color: "#cbd5e1" }, { u: 0.70, v: 0.14, size: 15, color: "#93c5fd" }, { u: 0.90, v: 0.08, size: 15, color: "#fca5a5" }]
+      },
+      {
+        id: "lyney", num: "34", name: "林尼", enName: "Lyney", title: "惑光幻戏",
+        code: "TEYVAT · SAR-34", element: "火", region: "枫丹",
+        glow: "#e11d48", glow2: "#fbbf24",
+        lore: "声名远扬的枫丹大魔术师，红玫瑰礼帽与眼角泪痣在流光中演绎奇幻戏法。",
+        image: "assets/cards/34_lyney.jpg",
+        stars: [{ u: 0.28, v: 0.17, size: 18, color: "#fb7185" }, { u: 0.49, v: 0.58, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#fda4af" }]
+      },
+      {
+        id: "kinich", num: "35", name: "基尼奇", enName: "Kinich", title: "回火狩猎",
+        code: "TEYVAT · SAR-35", element: "草", region: "纳塔",
+        glow: "#84cc16", glow2: "#f97316",
+        lore: "悬木人的冷静猎龙人，青绿像素风头带与利落短发在微光下充满跃动张力。",
+        image: "assets/cards/35_kinich.jpg",
+        stars: [{ u: 0.60, v: 0.25, size: 17, color: "#a3e635" }, { u: 0.48, v: 0.63, size: 16, color: "#fb923c" }, { u: 0.90, v: 0.08, size: 15, color: "#bef264" }]
+      },
+      {
+        id: "diluc", num: "36", name: "迪卢克", enName: "Diluc", title: "晨曦的暗面",
+        code: "TEYVAT · SAR-36", element: "火", region: "蒙德",
+        glow: "#ef4444", glow2: "#f59e0b",
+        lore: "晨曦酒庄的贵族庄主与蒙德暗夜英雄，炽红长发与黑金礼服在光影下沉稳冷峻。",
+        image: "assets/cards/36_diluc.jpg",
+        stars: [{ u: 0.48, v: 0.60, size: 17, color: "#fb7185" }, { u: 0.30, v: 0.20, size: 15, color: "#f97316" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "jean", num: "37", name: "琴", enName: "Jean", title: "蒲公英骑士",
+        code: "TEYVAT · SAR-37", element: "风", region: "蒙德",
+        glow: "#34d399", glow2: "#60a5fa",
+        lore: "西风骑士团代理团长，金色高马尾与蓝金礼服散发守护蒙德的温柔与坚定。",
+        image: "assets/cards/37_jean.jpg",
+        stars: [{ u: 0.74, v: 0.61, size: 17, color: "#fde68a" }, { u: 0.49, v: 0.54, size: 15, color: "#6ee7b7" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "mona", num: "38", name: "莫娜", enName: "Mona", title: "星天水镜",
+        code: "TEYVAT · SAR-38", element: "水", region: "蒙德",
+        glow: "#3b82f6", glow2: "#f472b6",
+        lore: "神秘博学的占星术士，宽檐星盘巫师帽与金星胸饰在虹彩折射中闪耀星辉。",
+        image: "assets/cards/38_mona.jpg",
+        stars: [{ u: 0.36, v: 0.20, size: 19, color: "#fde68a" }, { u: 0.49, v: 0.60, size: 18, color: "#fbbf24" }, { u: 0.90, v: 0.08, size: 15, color: "#93c5fd" }]
+      },
+      {
+        id: "albedo", num: "39", name: "阿贝多", enName: "Albedo", title: "白垩之子",
+        code: "TEYVAT · SAR-39", element: "岩", region: "蒙德",
+        glow: "#fbbf24", glow2: "#38bdf8",
+        lore: "西风骑士团首席炼金术士，颈间金色四芒星印记与澄澈眼眸凝望世间真理。",
+        image: "assets/cards/39_albedo.jpg",
+        stars: [{ u: 0.50, v: 0.54, size: 17, color: "#fde68a" }, { u: 0.55, v: 0.70, size: 18, color: "#fbbf24" }, { u: 0.90, v: 0.08, size: 15, color: "#7dd3fc" }]
+      },
+      {
+        id: "varka", num: "40", name: "法尔伽", enName: "Varka", title: "北风骑士",
+        code: "TEYVAT · SAR-40", element: "风", region: "蒙德",
+        glow: "#10b981", glow2: "#38bdf8",
+        lore: "西风骑士团大团长与当代传奇，白狼毛领大衣与胸前风之眼尽显豪迈与威望。",
+        image: "assets/cards/40_varka.jpg",
+        stars: [{ u: 0.49, v: 0.60, size: 19, color: "#34d399" }, { u: 0.48, v: 0.73, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "durin", num: "41", name: "杜林", enName: "Durin", title: "星辰馈赠",
+        code: "TEYVAT · SAR-41", element: "火", region: "蒙德",
+        glow: "#e11d48", glow2: "#a855f7",
+        lore: "重获新生的龙裔少年，暗紫龙角小翼与胸口绯红心晶在微光中静静守望远方。",
+        image: "assets/cards/41_durin.jpg",
+        stars: [{ u: 0.48, v: 0.60, size: 19, color: "#fb7185" }, { u: 0.70, v: 0.14, size: 15, color: "#c084fc" }, { u: 0.90, v: 0.08, size: 15, color: "#fda4af" }]
+      },
+      {
+        id: "qiqi", num: "42", name: "七七", enName: "Qiqi", title: "冻冻回魂夜",
+        code: "TEYVAT · SAR-42", element: "冰", region: "璃月",
+        glow: "#a78bfa", glow2: "#7dd3fc",
+        lore: "不卜庐的采药小僵尸，淡紫长发与额前敕令符纸在冰晶微光里呆萌安静。",
+        image: "assets/cards/42_qiqi.jpg",
+        stars: [{ u: 0.66, v: 0.27, size: 17, color: "#fde68a" }, { u: 0.50, v: 0.65, size: 17, color: "#7dd3fc" }, { u: 0.90, v: 0.08, size: 15, color: "#c4b5fd" }]
+      },
+      {
+        id: "baizhu", num: "43", name: "白术", enName: "Baizhu", title: "遵生合和",
+        code: "TEYVAT · SAR-43", element: "草", region: "璃月",
+        glow: "#10b981", glow2: "#fde68a",
+        lore: "不卜庐温润博学的医者，薄荷绿长辫与肩头小白蛇「长生」相伴护佑苍生。",
+        image: "assets/cards/43_baizhu.jpg",
+        stars: [{ u: 0.22, v: 0.48, size: 16, color: "#fde68a" }, { u: 0.31, v: 0.70, size: 16, color: "#34d399" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      },
+      {
+        id: "itto", num: "44", name: "荒泷一斗", enName: "Arataki Itto", title: "花坂豪快",
+        code: "TEYVAT · SAR-44", element: "岩", region: "稻妻",
+        glow: "#ef4444", glow2: "#fbbf24",
+        lore: "荒泷派初代目豪爽老大，绯红鬼角与灿烂大笑在金色岩光中张扬洒脱。",
+        image: "assets/cards/44_itto.jpg",
+        stars: [{ u: 0.50, v: 0.59, size: 18, color: "#fbbf24" }, { u: 0.60, v: 0.14, size: 16, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#fde68a" }]
+      },
+      {
+        id: "chiori", num: "45", name: "千织", enName: "Chiori", title: "鸣雷的裁锦师",
+        code: "TEYVAT · SAR-45", element: "岩", region: "稻妻",
+        glow: "#f59e0b", glow2: "#ef4444",
+        lore: "锋芒毕露的稻妻裁缝大师，金针发髻与黑金和服剪裁利落、气韵非凡。",
+        image: "assets/cards/45_chiori.jpg",
+        stars: [{ u: 0.80, v: 0.09, size: 18, color: "#fde68a" }, { u: 0.28, v: 0.17, size: 15, color: "#fb7185" }, { u: 0.90, v: 0.08, size: 15, color: "#fbbf24" }]
+      },
+      {
+        id: "tighnari", num: "46", name: "提纳里", enName: "Tighnari", title: "浅蔚轻行",
+        code: "TEYVAT · SAR-46", element: "草", region: "须弥",
+        glow: "#10b981", glow2: "#84cc16",
+        lore: "精通植物学的道成林巡林官，长耳与嫩绿挑染间满载林野灵气。",
+        image: "assets/cards/46_tighnari.jpg",
+        stars: [{ u: 0.35, v: 0.65, size: 17, color: "#fb7185" }, { u: 0.68, v: 0.68, size: 16, color: "#34d399" }, { u: 0.90, v: 0.08, size: 15, color: "#a3e635" }]
+      },
+      {
+        id: "dehya", num: "47", name: "迪希雅", enName: "Dehya", title: "炽鬃之狮",
+        code: "TEYVAT · SAR-47", element: "火", region: "须弥",
+        glow: "#ef4444", glow2: "#f59e0b",
+        lore: "纵横大赤沙海的镀金旅团炽鬃之狮，黑金挑染与赤红披巾英气逼人。",
+        image: "assets/cards/47_dehya.jpg",
+        stars: [{ u: 0.45, v: 0.80, size: 18, color: "#fb7185" }, { u: 0.24, v: 0.58, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#f97316" }]
+      },
+      {
+        id: "emilie", num: "48", name: "艾梅莉埃", enName: "Emilie", title: "千缕之踪",
+        code: "TEYVAT · SAR-48", element: "草", region: "枫丹",
+        glow: "#10b981", glow2: "#fbbf24",
+        lore: "优雅神秘的枫丹知名调香师，金丝圆镜与翠绿蕾丝礼服暗藏幽香。",
+        image: "assets/cards/48_emilie.jpg",
+        stars: [{ u: 0.50, v: 0.59, size: 18, color: "#34d399" }, { u: 0.36, v: 0.78, size: 16, color: "#fde68a" }, { u: 0.90, v: 0.08, size: 15, color: "#6ee7b7" }]
+      }
+    ];
+
+    // =========================================================================
+    // Application State
+    // =========================================================================
+    let activeScreen = "home"; // "home" | "gallery"
+    let filterType = "all";    // "all" | "element" | "region"
+    let filterValue = "all";
+    let filterBarMode = "element"; // "element" | "region"
+    let viewMode = "grid";     // "grid" | "stage"
+    let stageIndex = 0;
+    let ambientFloatEnabled = true;
+    let soundEnabled = false;
+    let modalOpenIndex = -1;
+    let modalFlipped = false;
+
+    const gridControllers = [];
+    let stageController = null;
+    let spotlightController = null;
+    let audioCtx = null;
+
+    function getFilteredCards() {
+      if (filterType === "element") return CARDS.filter((c) => c.element === filterValue);
+      if (filterType === "region") return CARDS.filter((c) => c.region === filterValue);
+      return CARDS;
+    }
+
+    function playChime(type) {
+      if (!soundEnabled) return;
+      try {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        if (audioCtx.state === "suspended") audioCtx.resume();
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type === "flip" ? "triangle" : "sine";
+        osc.frequency.setValueAtTime(type === "flip" ? 520 : 680, now);
+        osc.frequency.exponentialRampToValueAtTime(type === "flip" ? 880 : 960, now + 0.12);
+        gain.gain.setValueAtTime(0.001, now);
+        gain.gain.linearRampToValueAtTime(0.042, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.18);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start(now);
+        osc.stop(now + 0.19);
+      } catch (_) {}
+    }
+
+    function setAmbientTheme(a, b) {
+      document.documentElement.style.setProperty("--ambient-a", a);
+      document.documentElement.style.setProperty("--ambient-b", b);
+    }
+
+    // =========================================================================
+    // Home Lobby Portal Rendering
+    // =========================================================================
+    function buildHomePortals() {
+      const elContainer = document.getElementById("homeElementPortals");
+      elContainer.innerHTML = "";
+      ELEMENTS.forEach((el) => {
+        const count = CARDS.filter((c) => c.element === el.key).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "portal-tile inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-slate-200";
+        btn.innerHTML = `
+          <span class="w-2 h-2 rounded-full" style="background:${el.dot}; box-shadow: 0 0 8px ${el.dot};"></span>
+          <span>${el.label}</span>
+          <span class="text-[10px] font-mono text-slate-400">${count}</span>
+        `;
+        btn.addEventListener("click", () => enterGallery("element", el.key));
+        elContainer.appendChild(btn);
+      });
+
+      const regContainer = document.getElementById("homeRegionPortals");
+      regContainer.innerHTML = "";
+      REGIONS.forEach((reg) => {
+        const count = CARDS.filter((c) => c.region === reg.key).length;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "portal-tile inline-flex items-center gap-2 px-4 py-2 rounded-full text-xs font-medium text-slate-200";
+        btn.innerHTML = `
+          <span>${reg.label}</span>
+          <span class="text-[10px] font-mono text-amber-200/75">${count}</span>
+        `;
+        btn.addEventListener("click", () => enterGallery("region", reg.key));
+        regContainer.appendChild(btn);
+      });
+    }
+
+    // =========================================================================
+    // Screen Navigation (Home <-> Gallery)
+    // =========================================================================
+    function enterGallery(type, value) {
+      filterType = type;
+      filterValue = value;
+      if (type === "element") filterBarMode = "element";
+      if (type === "region") filterBarMode = "region";
+      stageIndex = 0;
+
+      activeScreen = "gallery";
+      document.getElementById("homeScreen").classList.add("hidden");
+      const gs = document.getElementById("galleryScreen");
+      gs.classList.remove("hidden");
+      gs.classList.add("flex", "screen-enter");
+
+      playChime("switch");
+      renderGalleryFilterBar();
+      renderCurrentGalleryView();
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function returnHome() {
+      closeSpotlight();
+      activeScreen = "home";
+      const gs = document.getElementById("galleryScreen");
+      gs.classList.add("hidden");
+      gs.classList.remove("flex", "screen-enter");
+      const hs = document.getElementById("homeScreen");
+      hs.classList.remove("hidden");
+      setAmbientTheme("#8b5cf6", "#38bdf8");
+      playChime("switch");
+    }
+
+    // =========================================================================
+    // Gallery Filter Bar
+    // =========================================================================
+    function renderGalleryFilterBar() {
+      const container = document.getElementById("galleryFilterTabs");
+      container.innerHTML = "";
+
+      const modeElBtn = document.getElementById("filterModeElement");
+      const modeRegBtn = document.getElementById("filterModeRegion");
+      modeElBtn.className = filterBarMode === "element"
+        ? "px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/14 text-white transition"
+        : "px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-400 hover:text-white transition";
+      modeRegBtn.className = filterBarMode === "region"
+        ? "px-2.5 py-1 rounded-full text-[11px] font-medium bg-white/14 text-white transition"
+        : "px-2.5 py-1 rounded-full text-[11px] font-medium text-slate-400 hover:text-white transition";
+
+      // "All" pill
+      const allBtn = document.createElement("button");
+      allBtn.type = "button";
+      const isAll = filterType === "all";
+      allBtn.className = isAll
+        ? "px-3 py-1 rounded-full text-xs font-medium bg-amber-300/20 text-amber-100 border border-amber-300/40 transition"
+        : "px-3 py-1 rounded-full text-xs font-medium text-slate-300 hover:bg-white/10 border border-transparent transition";
+      allBtn.textContent = `全部 (${CARDS.length})`;
+      allBtn.addEventListener("click", () => {
+        filterType = "all";
+        filterValue = "all";
+        stageIndex = 0;
+        playChime("switch");
+        renderGalleryFilterBar();
+        renderCurrentGalleryView();
+      });
+      container.appendChild(allBtn);
+
+      const items = filterBarMode === "element" ? ELEMENTS : REGIONS;
+      items.forEach((item) => {
+        const count = CARDS.filter((c) => (filterBarMode === "element" ? c.element : c.region) === item.key).length;
+        const active = filterType === filterBarMode && filterValue === item.key;
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = active
+          ? "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-violet-400/25 text-white border border-violet-300/45 transition"
+          : "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-300 hover:bg-white/10 border border-transparent transition";
+        btn.innerHTML = (item.dot ? `<span class="w-1.5 h-1.5 rounded-full" style="background:${item.dot};"></span>` : "")
+          + `<span>${item.label}</span><span class="text-[10px] font-mono opacity-70">${count}</span>`;
+        btn.addEventListener("click", () => {
+          filterType = filterBarMode;
+          filterValue = item.key;
+          stageIndex = 0;
+          playChime("switch");
+          renderGalleryFilterBar();
+          renderCurrentGalleryView();
+        });
+        container.appendChild(btn);
+      });
+    }
+
+    // =========================================================================
+    // Holo Card Builder & Starburst Renderer
+    // =========================================================================
+    function createHoloCardHTML(card, sizeClass) {
+      return `
+        <div class="holo-shadow" style="--card-glow: ${card.glow};"></div>
+        <div class="holo-card ${sizeClass}">
+          <div class="holo-flip">
+            <div class="thickness-layer" style="transform: translateZ(-1px); filter: brightness(0.95);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-2px); filter: brightness(0.88);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-3px); filter: brightness(0.82);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-4px); filter: brightness(0.92);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-5px); filter: brightness(0.76);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-6px); filter: brightness(0.70);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-7px); filter: brightness(0.64);"></div>
+            <div class="thickness-layer" style="transform: translateZ(-8px); filter: brightness(0.56);"></div>
+
+            <div class="card-face card-front">
+              <img class="card-art" src="${card.image}" alt="${card.name}" />
+              <div class="holo-pearl"></div>
+              <div class="holo-diffraction"></div>
+              <div class="holo-cosmos"></div>
+              <div class="holo-sweep"></div>
+              <canvas class="card-stars"></canvas>
+              <div class="bevel-rim"></div>
+              <div class="bevel-inner-line"></div>
+            </div>
+
+            <div class="card-face card-back">
+              <img class="card-back-art" src="${CARD_BACK_ART}" alt="提瓦特星象典藏卡背" />
+              <div class="back-holo-foil"></div>
+              <div class="back-holo-sweep"></div>
+              <div class="back-overlay-ui">
+                <div class="flex items-center justify-between text-[9px] font-mono tracking-widest uppercase text-amber-200/90">
+                  <span>${card.code}</span>
+                  <span class="px-1.5 py-0.5 rounded bg-black/45 border border-amber-200/30">${card.element} · ${card.region}</span>
+                </div>
+                <div class="text-center">
+                  <div class="text-[9px] tracking-[0.24em] uppercase text-amber-200/75">${card.enName}</div>
+                  <div class="text-base font-bold tracking-wider text-amber-50 mt-0.5">${card.name} · ${card.title}</div>
+                  <div class="mt-1.5 flex items-center justify-center gap-2 text-[9px] text-amber-300/95 tracking-widest">
+                    <span>★★★★★</span>
+                    <span class="text-white/30">|</span>
+                    <span class="text-violet-200/90">COSMOS SAR</span>
+                  </div>
+                </div>
+              </div>
+              <div class="bevel-rim"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function drawFourPointStar(ctx, x, y, size, alpha, color, rot) {
+      if (alpha <= 0.04) return;
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+
+      const grad = ctx.createRadialGradient(0, 0, 0, 0, 0, size * 0.95);
+      grad.addColorStop(0, "rgba(255,255,255,0.95)");
+      grad.addColorStop(0.28, color);
+      grad.addColorStop(1, "rgba(139,92,246,0)");
+      ctx.globalAlpha = Math.min(0.88, alpha * 0.78);
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(0, 0, size * 0.95, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = Math.min(0.95, alpha);
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      const rOut = size * 1.1;
+      const rIn = Math.max(1.2, size * 0.11);
+      ctx.moveTo(0, -rOut);
+      ctx.quadraticCurveTo(rIn, -rIn, rOut, 0);
+      ctx.quadraticCurveTo(rIn, rIn, 0, rOut);
+      ctx.quadraticCurveTo(-rIn, rIn, -rOut, 0);
+      ctx.quadraticCurveTo(-rIn, -rIn, 0, -rOut);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      const wOut = size * 0.78;
+      const wIn = Math.max(0.8, size * 0.06);
+      ctx.moveTo(0, -wOut);
+      ctx.quadraticCurveTo(wIn, -wIn, wOut, 0);
+      ctx.quadraticCurveTo(wIn, wIn, 0, wOut);
+      ctx.quadraticCurveTo(-wIn, wIn, -wOut, 0);
+      ctx.quadraticCurveTo(-wIn, -wIn, 0, -wOut);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    function attachCardController(slotEl, card, phaseOffset, scaleMode, callbacks) {
+      const cardEl = slotEl.querySelector(".holo-card");
+      const flipEl = slotEl.querySelector(".holo-flip");
+      const starCanvas = slotEl.querySelector(".card-stars");
+      const starCtx = starCanvas.getContext("2d");
+
+      const ctrl = {
+        slotEl, cardEl, flipEl, starCanvas, starCtx, card, phaseOffset, scaleMode,
+        hovering: false, flipped: false,
+        targetRx: 0, targetRy: 0, rx: 0, ry: 0, rz: 0, fy: 0
+      };
+
+      function syncCanvasSize() {
+        const rect = cardEl.getBoundingClientRect();
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
+        const w = Math.max(180, Math.floor(rect.width || 244));
+        const h = Math.max(270, Math.floor(rect.height || 366));
+        if (starCanvas.width !== Math.floor(w * dpr) || starCanvas.height !== Math.floor(h * dpr)) {
+          starCanvas.width = Math.floor(w * dpr);
+          starCanvas.height = Math.floor(h * dpr);
+          starCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+      }
+
+      ctrl.syncCanvasSize = syncCanvasSize;
+      syncCanvasSize();
+
+      cardEl.addEventListener("pointerenter", () => {
+        ctrl.hovering = true;
+        setAmbientTheme(card.glow, card.glow2);
+        if (callbacks && callbacks.onEnter) callbacks.onEnter();
+      });
+
+      cardEl.addEventListener("pointermove", (e) => {
+        const rect = cardEl.getBoundingClientRect();
+        const nx = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+        const ny = ((e.clientY - rect.top) / rect.height) * 2 - 1;
+        ctrl.hovering = true;
+        ctrl.targetRy = Math.max(-21, Math.min(21, nx * 21));
+        ctrl.targetRx = Math.max(-15, Math.min(15, -ny * 15));
+      });
+
+      cardEl.addEventListener("pointerleave", () => {
+        ctrl.hovering = false;
+        ctrl.targetRx = 0;
+        ctrl.targetRy = 0;
+        if (callbacks && callbacks.onLeave) callbacks.onLeave();
+      });
+
+      if (callbacks && callbacks.onClick) cardEl.addEventListener("click", callbacks.onClick);
+      if (callbacks && callbacks.onDblClick) cardEl.addEventListener("dblclick", callbacks.onDblClick);
+      return ctrl;
+    }
+
+    // =========================================================================
+    // Render Filtered Gallery (Grid or Stage)
+    // =========================================================================
+    function renderCurrentGalleryView() {
+      const list = getFilteredCards();
+      const titleText = filterType === "all"
+        ? "全部典藏闪卡"
+        : (filterType === "element" ? `${filterValue}元素展区` : `${filterValue}展区`);
+      document.getElementById("galleryHeading").firstChild.textContent = `${titleText} `;
+      document.getElementById("galleryCountBadge").textContent = `${list.length} 张`;
+
+      if (list.length > 0) setAmbientTheme(list[0].glow, list[0].glow2);
+
+      if (viewMode === "grid") {
+        buildGalleryGrid(list);
+      } else {
+        renderStageCarousel(stageIndex);
+      }
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function buildGalleryGrid(list) {
+      const grid = document.getElementById("galleryGrid");
+      grid.classList.remove("has-hover");
+      grid.innerHTML = "";
+      gridControllers.length = 0;
+
+      list.forEach((card, index) => {
+        const item = document.createElement("div");
+        item.className = "gallery-item reveal-card w-full flex flex-col items-center";
+        item.style.animationDelay = `${Math.min(index, 7) * 55}ms`;
+
+        item.innerHTML = `
+          <div class="holo-slot w-full">
+            ${createHoloCardHTML(card, "")}
+          </div>
+          <div class="mt-3.5 w-full max-w-[244px] flex items-center justify-between px-1 z-10">
+            <div>
+              <div class="text-sm font-semibold tracking-wide text-white flex items-center gap-1.5">
+                ${card.name}
+                <span class="text-[10px] font-mono text-amber-200/75">${card.num}</span>
+              </div>
+              <div class="text-[11px] text-slate-400 mt-0.5">${card.element} · ${card.region}</div>
+            </div>
+            <button type="button" class="inline-flip-btn glass-pill w-8 h-8 rounded-full flex items-center justify-center text-slate-300 hover:text-amber-200 hover:border-amber-200/40 transition" title="翻转查看卡背" aria-label="翻转${card.name}卡背">
+              <i data-lucide="repeat-2" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+        `;
+
+        grid.appendChild(item);
+        const slot = item.querySelector(".holo-slot");
+
+        const ctrl = attachCardController(slot, card, index * 0.9, "grid", {
+          onEnter: () => {
+            grid.classList.add("has-hover");
+            item.classList.add("is-focused");
+          },
+          onLeave: () => {
+            item.classList.remove("is-focused");
+            if (!grid.querySelector(".gallery-item.is-focused")) grid.classList.remove("has-hover");
+          },
+          onClick: () => openSpotlight(index)
+        });
+
+        item.querySelector(".inline-flip-btn").addEventListener("click", (e) => {
+          e.stopPropagation();
+          ctrl.flipped = !ctrl.flipped;
+          ctrl.flipEl.classList.toggle("is-flipped", ctrl.flipped);
+          playChime("flip");
+        });
+
+        gridControllers.push(ctrl);
+      });
+    }
+
+    function renderStageCarousel(idx) {
+      const list = getFilteredCards();
+      if (!list.length) return;
+      stageIndex = (idx + list.length) % list.length;
+      const card = list[stageIndex];
+      const prevCard = list[(stageIndex - 1 + list.length) % list.length];
+      const nextCard = list[(stageIndex + 1) % list.length];
+
+      setAmbientTheme(card.glow, card.glow2);
+      const showFlanks = list.length > 1;
+      document.getElementById("stagePrevCard").style.visibility = showFlanks ? "visible" : "hidden";
+      document.getElementById("stageNextCard").style.visibility = showFlanks ? "visible" : "hidden";
+      document.getElementById("stagePrevImg").src = prevCard.image;
+      document.getElementById("stageNextImg").src = nextCard.image;
+
+      document.getElementById("stageCardName").textContent = card.name;
+      document.getElementById("stageCardEn").textContent = `${card.enName} · ${card.title}`;
+      document.getElementById("stageCardBadge").textContent = `${card.element} · ${card.region}`;
+      document.getElementById("stageCardLore").textContent = card.lore;
+      document.getElementById("stageCounter").textContent = `${String(stageIndex + 1).padStart(2, "0")} / ${String(list.length).padStart(2, "0")}`;
+
+      const centerSlot = document.getElementById("stageCenterSlot");
+      centerSlot.innerHTML = createHoloCardHTML(card, "stage-size");
+
+      stageController = attachCardController(centerSlot, card, 0, "stage", {
+        onDblClick: () => {
+          stageController.flipped = !stageController.flipped;
+          stageController.flipEl.classList.toggle("is-flipped", stageController.flipped);
+          playChime("flip");
+        }
+      });
+
+      const dotsEl = document.getElementById("stageDots");
+      dotsEl.innerHTML = "";
+      list.forEach((c, i) => {
+        const dot = document.createElement("button");
+        dot.type = "button";
+        dot.ariaLabel = `切换至${c.name}`;
+        dot.className = i === stageIndex
+          ? "h-1.5 w-7 rounded-full bg-amber-300 transition-all"
+          : "h-1.5 w-2 rounded-full bg-white/25 hover:bg-white/50 transition-all";
+        dot.addEventListener("click", () => { playChime("switch"); renderStageCarousel(i); });
+        dotsEl.appendChild(dot);
+      });
+    }
+
+    // =========================================================================
+    // Spotlight Modal
+    // =========================================================================
+    const modalEl = document.getElementById("spotlightModal");
+    const spotlightSlot = document.getElementById("spotlightSlot");
+
+    function renderSpotlightCard(index) {
+      const list = getFilteredCards();
+      if (!list.length) return;
+      modalOpenIndex = (index + list.length) % list.length;
+      modalFlipped = false;
+      const card = list[modalOpenIndex];
+      setAmbientTheme(card.glow, card.glow2);
+
+      document.getElementById("modalCounter").textContent = `${card.code} (${modalOpenIndex + 1}/${list.length})`;
+      document.getElementById("modalElement").textContent = `${card.element}元素 · ${card.region}`;
+      document.getElementById("modalTitle").textContent = card.name;
+      document.getElementById("modalSubtitle").textContent = `${card.enName} · ${card.title}`;
+      document.getElementById("modalLore").textContent = card.lore;
+      document.getElementById("modalFlipLabel").textContent = "翻转查看卡背";
+
+      spotlightSlot.innerHTML = createHoloCardHTML(card, "spotlight-size");
+      spotlightController = attachCardController(spotlightSlot, card, 0, "modal", {
+        onDblClick: toggleModalFlip
+      });
+    }
+
+    function openSpotlight(index) {
+      playChime("switch");
+      renderSpotlightCard(index);
+      modalEl.classList.add("open");
+      modalEl.setAttribute("aria-hidden", "false");
+    }
+
+    function closeSpotlight() {
+      modalEl.classList.remove("open");
+      modalEl.setAttribute("aria-hidden", "true");
+      modalOpenIndex = -1;
+      spotlightController = null;
+    }
+
+    function toggleModalFlip() {
+      if (!spotlightController) return;
+      modalFlipped = !modalFlipped;
+      spotlightController.flipped = modalFlipped;
+      spotlightController.flipEl.classList.toggle("is-flipped", modalFlipped);
+      document.getElementById("modalFlipLabel").textContent = modalFlipped ? "翻回角色正面" : "翻转查看卡背";
+      playChime("flip");
+    }
+
+    // =========================================================================
+    // Controls & Event Binding
+    // =========================================================================
+    function syncSoundButtons() {
+      const homeBtn = document.getElementById("homeSoundBtn");
+      const galBtn = document.getElementById("btnSoundToggle");
+      homeBtn.innerHTML = soundEnabled
+        ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-200"></i><span class="text-amber-100">音效：开</span>'
+        : '<i data-lucide="volume-x" class="w-3.5 h-3.5"></i><span>音效：关</span>';
+      galBtn.innerHTML = soundEnabled
+        ? '<i data-lucide="volume-2" class="w-3.5 h-3.5 text-amber-200"></i>'
+        : '<i data-lucide="volume-x" class="w-3.5 h-3.5"></i>';
+      if (window.lucide) window.lucide.createIcons();
+    }
+
+    function toggleSound() {
+      soundEnabled = !soundEnabled;
+      syncSoundButtons();
+      if (soundEnabled) playChime("switch");
+    }
+
+    function setViewMode(mode) {
+      viewMode = mode;
+      const gridContainer = document.getElementById("viewGridContainer");
+      const stageContainer = document.getElementById("viewStageContainer");
+      const btnGrid = document.getElementById("btnViewGrid");
+      const btnStage = document.getElementById("btnViewStage");
+
+      if (mode === "grid") {
+        gridContainer.classList.remove("hidden");
+        stageContainer.classList.add("hidden");
+        stageContainer.classList.remove("flex");
+        btnGrid.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/14 text-white transition";
+        btnStage.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-400 hover:text-white transition";
+      } else {
+        gridContainer.classList.add("hidden");
+        stageContainer.classList.remove("hidden");
+        stageContainer.classList.add("flex");
+        btnStage.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-white/14 text-white transition";
+        btnGrid.className = "inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium text-slate-400 hover:text-white transition";
+      }
+      renderCurrentGalleryView();
+      playChime("switch");
+    }
+
+    document.getElementById("btnEnterAll").addEventListener("click", () => enterGallery("all", "all"));
+    document.getElementById("btnBackHome").addEventListener("click", returnHome);
+    document.getElementById("homeSoundBtn").addEventListener("click", toggleSound);
+    document.getElementById("btnSoundToggle").addEventListener("click", toggleSound);
+
+    document.getElementById("filterModeElement").addEventListener("click", () => {
+      filterBarMode = "element";
+      renderGalleryFilterBar();
+    });
+    document.getElementById("filterModeRegion").addEventListener("click", () => {
+      filterBarMode = "region";
+      renderGalleryFilterBar();
+    });
+
+    document.getElementById("btnViewGrid").addEventListener("click", () => setViewMode("grid"));
+    document.getElementById("btnViewStage").addEventListener("click", () => setViewMode("stage"));
+
+    document.getElementById("stagePrevBtn").addEventListener("click", () => { playChime("switch"); renderStageCarousel(stageIndex - 1); });
+    document.getElementById("stageNextBtn").addEventListener("click", () => { playChime("switch"); renderStageCarousel(stageIndex + 1); });
+    document.getElementById("stagePrevCard").addEventListener("click", () => { playChime("switch"); renderStageCarousel(stageIndex - 1); });
+    document.getElementById("stageNextCard").addEventListener("click", () => { playChime("switch"); renderStageCarousel(stageIndex + 1); });
+    document.getElementById("stageFlipBtn").addEventListener("click", () => {
+      if (!stageController) return;
+      stageController.flipped = !stageController.flipped;
+      stageController.flipEl.classList.toggle("is-flipped", stageController.flipped);
+      playChime("flip");
+    });
+
+    document.getElementById("modalCloseBtn").addEventListener("click", closeSpotlight);
+    document.getElementById("modalFlipBtn").addEventListener("click", toggleModalFlip);
+    document.getElementById("modalPrevBtn").addEventListener("click", () => { playChime("switch"); renderSpotlightCard(modalOpenIndex - 1); });
+    document.getElementById("modalNextBtn").addEventListener("click", () => { playChime("switch"); renderSpotlightCard(modalOpenIndex + 1); });
+    modalEl.addEventListener("click", (e) => { if (e.target === modalEl) closeSpotlight(); });
+
+    document.getElementById("btnAmbientFloat").addEventListener("click", () => {
+      ambientFloatEnabled = !ambientFloatEnabled;
+      document.getElementById("ambientFloatLabel").textContent = ambientFloatEnabled ? "微浮：开" : "微浮：关";
+    });
+
+    window.addEventListener("pointermove", (e) => {
+      const px = (e.clientX / window.innerWidth) * 100;
+      const py = (e.clientY / window.innerHeight) * 100;
+      document.documentElement.style.setProperty("--cursor-x", `${px.toFixed(1)}%`);
+      document.documentElement.style.setProperty("--cursor-y", `${py.toFixed(1)}%`);
+    });
+
+    window.addEventListener("keydown", (e) => {
+      if (modalOpenIndex >= 0) {
+        if (e.key === "Escape") closeSpotlight();
+        if (e.key === "ArrowLeft") { playChime("switch"); renderSpotlightCard(modalOpenIndex - 1); }
+        if (e.key === "ArrowRight") { playChime("switch"); renderSpotlightCard(modalOpenIndex + 1); }
+        if (e.key === " ") { e.preventDefault(); toggleModalFlip(); }
+      } else if (activeScreen === "gallery" && viewMode === "stage") {
+        if (e.key === "ArrowLeft") { playChime("switch"); renderStageCarousel(stageIndex - 1); }
+        if (e.key === "ArrowRight") { playChime("switch"); renderStageCarousel(stageIndex + 1); }
+        if (e.key === " " && stageController) {
+          e.preventDefault();
+          stageController.flipped = !stageController.flipped;
+          stageController.flipEl.classList.toggle("is-flipped", stageController.flipped);
+          playChime("flip");
+        }
+      }
+    });
+
+    // =========================================================================
+    // Ambient Background Stardust Particles & 60fps Loop
+    // =========================================================================
+    const ambCanvas = document.getElementById("ambientParticles");
+    const ambCtx = ambCanvas.getContext("2d");
+    const ambPalette = ["#a78bfa", "#67e8f9", "#fde68a", "#f0abfc"];
+    const ambPool = Array.from({ length: 34 }, (_, i) => ({
+      x: Math.random(), y: Math.random(),
+      r: 1.4 + Math.random() * 4.4,
+      ax: 0.014 + Math.random() * 0.024,
+      ay: 0.018 + Math.random() * 0.028,
+      px: Math.random() * Math.PI * 2,
+      py: Math.random() * Math.PI * 2,
+      spd: 0.32 + Math.random() * 0.52,
+      col: ambPalette[i % ambPalette.length],
+      spark: i % 5 === 0
+    }));
+
+    function resizeAll() {
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      ambCanvas.width = Math.floor(window.innerWidth * dpr);
+      ambCanvas.height = Math.floor(window.innerHeight * dpr);
+      ambCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      gridControllers.forEach((c) => c.syncCanvasSize());
+      if (stageController) stageController.syncCanvasSize();
+      if (spotlightController) spotlightController.syncCanvasSize();
+    }
+
+    let lastTs = performance.now();
+    let globalPhase = 0;
+    let rafHandle = null;
+
+    function updateController(ctrl, dt, t) {
+      const p = t + ctrl.phaseOffset;
+      let gx = ctrl.targetRx;
+      let gy = ctrl.targetRy;
+      let gz = 0;
+      let gfy = 0;
+
+      if (!ctrl.hovering) {
+        if (ambientFloatEnabled) {
+          const isLarge = ctrl.scaleMode !== "grid";
+          gy = (isLarge ? 14.5 : 8.2) * Math.sin(p);
+          gx = (isLarge ? 9.0 : 5.0) * Math.cos(p);
+          gz = (isLarge ? 1.4 : 0.7) * Math.sin(p * 2);
+          gfy = (isLarge ? 6.0 : 4.2) * Math.sin(p + Math.PI * 0.25);
+        }
+      } else {
+        gfy = -4;
+      }
+
+      const lerp = 1 - Math.exp(-dt * 9.5);
+      ctrl.rx += (gx - ctrl.rx) * lerp;
+      ctrl.ry += (gy - ctrl.ry) * lerp;
+      ctrl.rz += (gz - ctrl.rz) * lerp;
+      ctrl.fy += (gfy - ctrl.fy) * lerp;
+
+      const normX = 0.5 + ctrl.ry / 34;
+      const normY = 0.5 - ctrl.rx / 26;
+      const mx = Math.max(0, Math.min(100, normX * 100));
+      const my = Math.max(0, Math.min(100, normY * 100));
+      const sweepNorm = 0.5 + (ctrl.ry / 30) * 0.58 - (ctrl.rx / 24) * 0.25;
+      const sweepPct = Math.max(-12, Math.min(115, sweepNorm * 100));
+      const hue = ctrl.ry * 4.0 + ctrl.rx * 2.6;
+
+      const st = ctrl.slotEl.style;
+      st.setProperty("--rx", `${ctrl.rx.toFixed(2)}deg`);
+      st.setProperty("--ry", `${ctrl.ry.toFixed(2)}deg`);
+      st.setProperty("--rz", `${ctrl.rz.toFixed(2)}deg`);
+      st.setProperty("--fy", `${ctrl.fy.toFixed(2)}px`);
+      st.setProperty("--mx", `${mx.toFixed(1)}%`);
+      st.setProperty("--my", `${my.toFixed(1)}%`);
+      st.setProperty("--sweep", `${sweepPct.toFixed(1)}%`);
+      st.setProperty("--hue", `${hue.toFixed(1)}deg`);
+      st.setProperty("--sx", `${(-ctrl.ry * 1.35).toFixed(1)}px`);
+      st.setProperty("--sy", `${(22 + ctrl.rx * 0.85 - ctrl.fy * 0.35).toFixed(1)}px`);
+
+      const dpr = Math.min(window.devicePixelRatio || 1, 2);
+      const cw = ctrl.starCanvas.width / dpr;
+      const ch = ctrl.starCanvas.height / dpr;
+      ctrl.starCtx.clearRect(0, 0, cw, ch);
+      if (ctrl.flipped) return;
+
+      ctrl.card.stars.forEach((s, i) => {
+        const diag = s.u * 0.65 + s.v * 0.35;
+        const dist = Math.abs(diag - sweepNorm);
+        const peak = Math.exp(-(dist * dist) / (2 * 0.14 * 0.14));
+        const twinkle = 0.24 + 0.32 * (0.5 + 0.5 * Math.sin(p * 2.1 + i * 1.4));
+        const alpha = twinkle * 0.32 + peak * 0.72;
+        const sz = s.size * (ctrl.scaleMode !== "grid" ? 1.15 : 0.92) * (0.75 + 0.4 * peak);
+        drawFourPointStar(ctrl.starCtx, s.u * cw, s.v * ch, sz, alpha, s.color, 0.2 * Math.sin(p + i));
+      });
+    }
+
+    function tick(now) {
+      const dt = Math.min(0.05, (now - lastTs) / 1000);
+      lastTs = now;
+      globalPhase += dt * 1.15;
+
+      const w = window.innerWidth;
+      const h = window.innerHeight;
+      ambCtx.clearRect(0, 0, w, h);
+      for (let i = 0; i < ambPool.length; i++) {
+        const pt = ambPool[i];
+        const x = (pt.x + pt.ax * Math.sin(globalPhase * pt.spd + pt.px)) * w;
+        const y = (pt.y + pt.ay * Math.cos(globalPhase * pt.spd + pt.py)) * h;
+        const pulse = 0.4 + 0.6 * Math.sin(globalPhase * 1.2 + pt.px);
+        if (pt.spark) {
+          drawFourPointStar(ambCtx, x, y, pt.r * 2.8, pulse * 0.52, pt.col, Math.sin(globalPhase + pt.px) * 0.3);
+        } else {
+          ambCtx.save();
+          ambCtx.globalCompositeOperation = "lighter";
+          const g = ambCtx.createRadialGradient(x, y, 0, x, y, pt.r * 2.4);
+          g.addColorStop(0, pt.col);
+          g.addColorStop(1, "rgba(0,0,0,0)");
+          ambCtx.globalAlpha = 0.24 * pulse;
+          ambCtx.fillStyle = g;
+          ambCtx.beginPath();
+          ambCtx.arc(x, y, pt.r * 2.4, 0, Math.PI * 2);
+          ambCtx.fill();
+          ambCtx.restore();
+        }
+      }
+
+      if (activeScreen === "gallery") {
+        if (viewMode === "grid") {
+          gridControllers.forEach((ctrl) => updateController(ctrl, dt, globalPhase));
+        } else if (stageController) {
+          updateController(stageController, dt, globalPhase);
+        }
+        if (spotlightController) {
+          updateController(spotlightController, dt, globalPhase);
+        }
+      }
+
+      rafHandle = requestAnimationFrame(tick);
+    }
+
+    window.addEventListener("resize", resizeAll);
+    function bootApp() {
+      if (bootApp._done) return;
+      bootApp._done = true;
+      buildHomePortals();
+      if (window.lucide) window.lucide.createIcons();
+      resizeAll();
+      if (rafHandle) cancelAnimationFrame(rafHandle);
+      rafHandle = requestAnimationFrame(tick);
+    }
+    if (document.readyState === "loading") {
+      document.addEventListener("DOMContentLoaded", bootApp);
+    } else {
+      bootApp();
+    }
+    window.addEventListener("load", () => {
+      if (window.lucide) window.lucide.createIcons();
+      resizeAll();
+    });
+  </script>
+</body>
+</html>
